@@ -1,23 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
 venv/
 .venv/
-__pycache__/
-*.pyc
+env/
+ENV/
+
+# Environment/secrets
 .env
 .env.*
+!.env.example
+
+# Local databases
 *.db
 *.sqlite
 *.sqlite3
+
+# Local uploads / generated data
 uploads/
 data/
 storage/
+
+# IDE/editor
 .vscode/
 .idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary/debug/test files
 *.log
-*.backup
-*.bak
 _smoke.py
 _ai_check.py
 _e2e_test.py
+
+# Backup files
+*.backup
+*.bak
 
 # Temporary test files
 *_test.py
@@ -27,4 +50,3 @@ test_mic.wav
 test_rec.wav
 test_tts.wav
 _test_*.py
-.streamlit/secrets.toml
