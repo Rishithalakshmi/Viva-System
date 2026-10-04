@@ -21,9 +21,11 @@ from services.asr import DEFAULT_AUDIO_DEVICE, record_audio_dshow, transcribe_au
 from services.llm import validate_and_clean_question
 from services.viva import (
     audio_file_path,
+    get_manual_experiments,
     get_open_session,
     get_session,
     published_experiments,
+    published_manuals,
     start_viva_session,
     student_sessions,
     submit_answer,
@@ -236,66 +238,94 @@ def render_student(user: User) -> None:
         c3.metric("In progress", len(in_progress))
         c4.metric("Average total", f"{avg:.1f}/{MAX_MARKS_TOTAL}")
         st.markdown("#### Available laboratory manuals")
-        experiments = published_experiments()
-        if not experiments:
+        manuals = published_manuals()
+        if not manuals:
             st.info("No published laboratory manuals are available yet. Please wait for faculty to publish.")
         else:
-            rows = [
-                {
-                    "Manual": item.manual.title,
-                    "Experiment": f"Experiment {item.number}",
-                    "Topic": format_experiment_title(item.title, item.number),
-                    "Faculty": item.manual.faculty.full_name if item.manual.faculty else "",
-                }
-                for item in experiments
-            ]
-            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            for m in manuals:
+                with st.expander(f"📚 {m.title} · {len(m.experiments)} Experiments (Faculty: {m.faculty.full_name if m.faculty else 'Department'})", expanded=True):
+                    exp_rows = [
+                        {
+                            "Number": f"Experiment {item.number}",
+                            "Title": format_experiment_title(item.title, item.number),
+                        }
+                        for item in m.experiments
+                    ]
+                    if exp_rows:
+                        st.dataframe(pd.DataFrame(exp_rows), use_container_width=True, hide_index=True)
+                    else:
+                        st.caption("No experiments registered in this manual.")
 
     with viva:
-        experiments = published_experiments()
-        if not experiments:
-            st.info("Faculty have not published a laboratory manual yet.")
+        manuals = published_manuals()
+        if not manuals:
+            st.info("Faculty have not published any laboratory manuals yet.")
         else:
-            labels = {
-                f"Experiment {item.number} — {format_experiment_title(item.title, item.number)}": item.id
-                for item in experiments
-            }
-            selected_label = st.selectbox("Select experiment", list(labels.keys()))
-            experiment_id = labels[selected_label]
-            if st.session_state.get("selected_experiment_id") != experiment_id:
-                st.session_state.selected_experiment_id = experiment_id
-                st.session_state.pop("viva_session_id", None)
-                st.session_state.viva_mode_started = False
-                _reset_answer_state()
+            manual_map = {}
+            for m in manuals:
+                if len([x for x in manuals if x.title == m.title]) > 1:
+                    label = f"📚 {m.title} (ID #{m.id} · {len(m.experiments)} experiments)"
+                else:
+                    label = f"📚 {m.title} ({len(m.experiments)} experiments)"
+                manual_map[label] = m.id
 
-            open_session = get_open_session(user.id, experiment_id)
-            if open_session and open_session.questions:
-                st.session_state.viva_session_id = open_session.id
+            selected_manual_label = st.selectbox(
+                "Select Laboratory Manual",
+                list(manual_map.keys()),
+                key="student_selected_manual",
+            )
+            selected_manual_id = manual_map[selected_manual_label]
 
-            col_a, col_b = st.columns([1, 2])
-            with col_a:
-                start = st.button("🚀 Start / Resume Viva", type="primary", use_container_width=True)
-            with col_b:
-                st.caption("AI Voice speaks each question. Dedicated oral viva assessment will begin.")
+            # Fetch and display ONLY experiments belonging to the selected manual
+            manual_experiments = get_manual_experiments(selected_manual_id, published_only=True)
+            if not manual_experiments:
+                st.warning("No experiments available under the selected laboratory manual.")
+            else:
+                exp_map = {
+                    f"Experiment {item.number}: {format_experiment_title(item.title, item.number)}": item.id
+                    for item in manual_experiments
+                }
+                selected_exp_label = st.selectbox(
+                    "Select Experiment",
+                    list(exp_map.keys()),
+                    key=f"student_selected_exp_{selected_manual_id}",
+                )
+                experiment_id = exp_map[selected_exp_label]
 
-            if start:
-                progress = st.progress(15)
-                note = st.empty()
-                note.info("Initializing viva session & generating experiment-specific questions...")
-                try:
-                    progress.progress(50)
-                    session = start_viva_session(user.id, experiment_id)
-                    progress.progress(100)
-                    st.session_state.viva_session_id = session.id
-                    st.session_state.viva_mode_started = True
+                if st.session_state.get("selected_experiment_id") != experiment_id:
+                    st.session_state.selected_experiment_id = experiment_id
+                    st.session_state.pop("viva_session_id", None)
+                    st.session_state.viva_mode_started = False
                     _reset_answer_state()
-                    note.success("Viva session ready! Launching...")
-                    time.sleep(0.3)
-                    st.rerun()
-                except Exception as exc:
-                    progress.progress(100)
-                    note.error(f"Viva initialization failed: {exc}")
-                    st.error(str(exc))
+
+                open_session = get_open_session(user.id, experiment_id)
+                if open_session and open_session.questions:
+                    st.session_state.viva_session_id = open_session.id
+
+                col_a, col_b = st.columns([1, 2])
+                with col_a:
+                    start = st.button("🚀 Start / Resume Viva", type="primary", use_container_width=True)
+                with col_b:
+                    st.caption("AI Voice speaks each question. Dedicated oral viva assessment will begin.")
+
+                if start:
+                    progress = st.progress(15)
+                    note = st.empty()
+                    note.info("Initializing viva session & generating experiment-specific questions...")
+                    try:
+                        progress.progress(50)
+                        session = start_viva_session(user.id, experiment_id)
+                        progress.progress(100)
+                        st.session_state.viva_session_id = session.id
+                        st.session_state.viva_mode_started = True
+                        _reset_answer_state()
+                        note.success("Viva session ready! Launching...")
+                        time.sleep(0.3)
+                        st.rerun()
+                    except Exception as exc:
+                        progress.progress(100)
+                        note.error(f"Viva initialization failed: {exc}")
+                        st.error(str(exc))
 
     with history:
         sessions = student_sessions(user.id)
@@ -315,7 +345,7 @@ def render_student(user: User) -> None:
                 )
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
             for item in sessions:
-                with st.expander(f"Experiment {item.experiment.number} — {format_experiment_title(item.experiment.title, item.experiment.number)} · {item.status}"):
+                with st.expander(f"[{item.experiment.manual.title}] Experiment {item.experiment.number} — {format_experiment_title(item.experiment.title, item.experiment.number)} · {item.status}"):
                     for question in item.questions:
                         clean_q = validate_and_clean_question(question.question_text)
                         st.markdown(f"**Q{question.order_index}.** {clean_q}")

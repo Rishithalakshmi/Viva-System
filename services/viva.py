@@ -63,6 +63,102 @@ def list_manuals(published_only: bool = False, faculty_id: int | None = None) ->
         return manuals
 
 
+def published_manuals() -> list[Manual]:
+    with session_scope() as db:
+        rows = (
+            db.query(Manual)
+            .options(joinedload(Manual.experiments), joinedload(Manual.faculty))
+            .filter(Manual.is_published.is_(True))
+            .order_by(Manual.title.asc(), Manual.id.asc())
+            .all()
+        )
+        for row in rows:
+            row.experiments
+            row.faculty
+            db.expunge(row)
+        return rows
+
+
+def get_manual_experiments(manual_id: int, published_only: bool = False) -> list[Experiment]:
+    with session_scope() as db:
+        query = (
+            db.query(Experiment)
+            .join(Manual)
+            .options(joinedload(Experiment.manual).joinedload(Manual.faculty))
+            .filter(Experiment.manual_id == manual_id)
+        )
+        if published_only:
+            query = query.filter(Manual.is_published.is_(True))
+        rows = query.order_by(Experiment.number.asc()).all()
+        for row in rows:
+            _ = row.manual.faculty
+            db.expunge(row)
+        return rows
+
+
+def reprocess_manual(manual_id: int) -> Manual | None:
+    with session_scope() as db:
+        manual = (
+            db.query(Manual)
+            .options(joinedload(Manual.experiments))
+            .filter(Manual.id == manual_id)
+            .one_or_none()
+        )
+        if not manual:
+            return None
+
+        stored = Path(manual.stored_path)
+        if stored.exists():
+            text = extract_manual_text(stored)
+        elif manual.extracted_text:
+            text = manual.extracted_text
+        else:
+            return manual
+
+        manual.extracted_text = text
+        detected = detect_experiments(text)
+        if not detected:
+            return manual
+
+        existing_exps = {e.number: e for e in manual.experiments}
+        seen_numbers = set()
+
+        for item in detected:
+            num = int(item["number"])
+            seen_numbers.add(num)
+            if num in existing_exps:
+                exp = existing_exps[num]
+                exp.title = item["title"]
+                exp.content = item["content"]
+            else:
+                db.add(
+                    Experiment(
+                        manual_id=manual.id,
+                        number=num,
+                        title=item["title"],
+                        content=item["content"],
+                    )
+                )
+
+        # Remove experiments that are no longer detected and have no viva sessions
+        for num, exp in list(existing_exps.items()):
+            if num not in seen_numbers and not exp.sessions:
+                db.delete(exp)
+
+        manual.updated_at = datetime.utcnow()
+        db.flush()
+        db.refresh(manual)
+        db.expunge(manual)
+        return manual
+
+
+def reprocess_all_manuals() -> None:
+    with session_scope() as db:
+        manual_ids = [m.id for m in db.query(Manual.id).all()]
+    for mid in manual_ids:
+        reprocess_manual(mid)
+
+
 def get_manual(manual_id: int) -> Manual | None:
     with session_scope() as db:
         manual = (
@@ -161,7 +257,11 @@ def get_open_session(student_id: int, experiment_id: int) -> VivaSession | None:
     with session_scope() as db:
         session = (
             db.query(VivaSession)
-            .options(joinedload(VivaSession.questions).joinedload(VivaQuestion.answer))
+            .options(
+                joinedload(VivaSession.questions).joinedload(VivaQuestion.answer),
+                joinedload(VivaSession.experiment).joinedload(Experiment.manual),
+                joinedload(VivaSession.student),
+            )
             .filter(
                 VivaSession.student_id == student_id,
                 VivaSession.experiment_id == experiment_id,
@@ -171,6 +271,8 @@ def get_open_session(student_id: int, experiment_id: int) -> VivaSession | None:
             .first()
         )
         if session:
+            session.experiment.manual
+            session.student
             for question in session.questions:
                 question.answer
             db.expunge(session)

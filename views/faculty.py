@@ -10,6 +10,7 @@ from services.viva import (
     delete_experiment,
     get_manual,
     list_manuals,
+    reprocess_manual,
     set_manual_published,
     update_experiment,
     update_manual_settings,
@@ -100,11 +101,14 @@ def render_faculty(user: User) -> None:
             st.info("Upload a laboratory manual to begin.")
 
         else:
-            options = {
-                f"{item.title} "
-                f"({'Published' if item.is_published else 'Draft'})": item.id
-                for item in manuals
-            }
+            options = {}
+            for item in manuals:
+                status_str = "Published" if item.is_published else "Draft"
+                if len([x for x in manuals if x.title == item.title]) > 1:
+                    label = f"{item.title} (ID #{item.id} · {status_str})"
+                else:
+                    label = f"{item.title} ({status_str})"
+                options[label] = item.id
 
             selected = st.selectbox(
                 "Select manual",
@@ -117,7 +121,7 @@ def render_faculty(user: User) -> None:
                 st.error("Unable to load the selected manual.")
 
             else:
-                c1, c2, c3 = st.columns(3)
+                c1, c2, c3, c4 = st.columns(4)
 
                 with c1:
                     if st.button(
@@ -147,6 +151,19 @@ def render_faculty(user: User) -> None:
                             st.error(str(exc))
 
                 with c3:
+                    if st.button(
+                        "Re-extract Experiments",
+                        use_container_width=True,
+                        help="Re-parse the manual file and refresh detected experiments.",
+                    ):
+                        try:
+                            reprocess_manual(manual.id)
+                            st.success("Experiments re-extracted and synchronized.")
+                            st.rerun()
+                        except Exception as exc:
+                            st.error(str(exc))
+
+                with c4:
                     st.caption("Published manuals are visible to students.")
 
                 st.divider()

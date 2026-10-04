@@ -410,13 +410,453 @@ _TOPIC_QUESTION_BANKS: dict[str, list[dict]] = {
             "topic_aspect": "reconstruction_tradeoff",
         },
     ],
+    "Understanding the Perceptron": [
+        {
+            "question": "What mathematical operation does a single Perceptron perform on its input features (x), weights (w), and bias (b)?",
+            "expected_concepts": ["linear combination", "dot product of weights and inputs", "sum w_i * x_i + bias", "weighted sum"],
+            "difficulty": "easy",
+            "topic_aspect": "mathematical_formula",
+        },
+        {
+            "question": "How does the step activation function convert the Perceptron's weighted sum into a binary classification output?",
+            "expected_concepts": ["step function", "threshold comparison", "output 1 if sum >= threshold else 0", "binary decision"],
+            "difficulty": "easy",
+            "topic_aspect": "activation_function",
+        },
+        {
+            "question": "What is the role of the learning rate (eta) in updating weights during Perceptron training?",
+            "expected_concepts": ["learning rate", "step size of weight update", "gradient scaling", "convergence stability"],
+            "difficulty": "medium",
+            "topic_aspect": "learning_rate",
+        },
+        {
+            "question": "Why can a single Perceptron classify linearly separable problems like AND/OR logic gates but fail on XOR?",
+            "expected_concepts": ["linear separability", "single linear decision boundary hyperplane", "xor is non-linear problem"],
+            "difficulty": "medium",
+            "topic_aspect": "linear_separability",
+        },
+        {
+            "question": "In the Iris dataset classification with Perceptron, how are multi-dimensional flower features mapped to a decision boundary?",
+            "expected_concepts": ["feature dimensions", "hyperplane separator", "sepal/petal measurements", "binary target split"],
+            "difficulty": "medium",
+            "topic_aspect": "dataset_application",
+        },
+        {
+            "question": "What condition must be met for the Perceptron Learning Algorithm (PLA) to guarantee convergence?",
+            "expected_concepts": ["linearly separable dataset", "perceptron convergence theorem", "finite number of weight updates"],
+            "difficulty": "medium",
+            "topic_aspect": "convergence_theory",
+        },
+    ],
+    "Single Layer Perceptron": [
+        {
+            "question": "How does a Single Layer Perceptron update its weight vector when a training instance is misclassified?",
+            "expected_concepts": ["weight update rule", "w_new = w_old + eta * (y_true - y_pred) * x", "error driven adjustment"],
+            "difficulty": "medium",
+            "topic_aspect": "weight_update",
+        },
+        {
+            "question": "What is the purpose of the bias term in a Single Layer Perceptron, and what happens if bias is omitted?",
+            "expected_concepts": ["bias allows decision boundary to shift away from origin", "intercept offset", "flexibility of hyperplane"],
+            "difficulty": "easy",
+            "topic_aspect": "bias_term",
+        },
+        {
+            "question": "How does a Single Layer Perceptron differ functionally from a Multi-Layer Perceptron (MLP)?",
+            "expected_concepts": ["no hidden layers", "restricted to linear decision boundaries", "mlp uses hidden layers and non-linear activations"],
+            "difficulty": "easy",
+            "topic_aspect": "architecture_difference",
+        },
+        {
+            "question": "How does the choice of initial weights affect the training iterations of a Single Layer Perceptron?",
+            "expected_concepts": ["weight initialization", "starting point on error surface", "number of convergence epochs"],
+            "difficulty": "medium",
+            "topic_aspect": "initialization",
+        },
+        {
+            "question": "What metric or stopping criterion is used to terminate training in a Single Layer Perceptron experiment?",
+            "expected_concepts": ["zero classification error on training set", "maximum epoch limit", "loss convergence"],
+            "difficulty": "easy",
+            "topic_aspect": "stopping_criterion",
+        },
+        {
+            "question": "Why is a threshold or step activation function not differentiable at zero, and how does that affect backpropagation?",
+            "expected_concepts": ["non-differentiable step function", "zero derivative almost everywhere", "need smooth activations for gradient descent"],
+            "difficulty": "medium",
+            "topic_aspect": "differentiability",
+        },
+    ],
+    "Activation Functions": [
+        {
+            "question": "What is the primary conceptual reason for using non-linear activation functions in deep neural networks?",
+            "expected_concepts": ["introducing non-linearity", "enabling learning of complex non-linear mappings", "preventing collapse into linear regression"],
+            "difficulty": "easy",
+            "topic_aspect": "non_linearity",
+        },
+        {
+            "question": "How does the vanishing gradient problem occur with the Sigmoid activation function during backpropagation?",
+            "expected_concepts": ["sigmoid derivative max is 0.25", "saturates at tails (0 and 1)", "gradients vanish through deep layers"],
+            "difficulty": "medium",
+            "topic_aspect": "vanishing_gradient",
+        },
+        {
+            "question": "Why is ReLU (Rectified Linear Unit) computationally efficient, and what is the 'dying ReLU' issue?",
+            "expected_concepts": ["relu is max(0, x)", "constant gradient of 1 for positive inputs", "dying relu when weights cause permanent negative inputs"],
+            "difficulty": "medium",
+            "topic_aspect": "relu_mechanics",
+        },
+        {
+            "question": "How does Leaky ReLU or ELU (Exponential Linear Unit) solve the zero-gradient issue for negative inputs in ReLU?",
+            "expected_concepts": ["small non-zero slope alpha for negative values", "prevents dead neurons", "elu smooth curve"],
+            "difficulty": "medium",
+            "topic_aspect": "leaky_relu_elu",
+        },
+        {
+            "question": "Why is the Tanh activation function generally preferred over standard Sigmoid in hidden layers?",
+            "expected_concepts": ["zero-centered output range (-1 to 1)", "stronger gradients", "faster convergence than standard sigmoid"],
+            "difficulty": "medium",
+            "topic_aspect": "tanh_zero_centered",
+        },
+        {
+            "question": "In what specific layer and for what classification type is the Softmax activation function typically used?",
+            "expected_concepts": ["output layer", "multi-class classification", "converts logits into normalized probability distribution summing to 1"],
+            "difficulty": "easy",
+            "topic_aspect": "softmax_application",
+        },
+    ],
+    "Optimizers in Neural Network": [
+        {
+            "question": "How does Stochastic Gradient Descent (SGD) differ conceptually from standard Batch Gradient Descent in terms of update frequency?",
+            "expected_concepts": ["sgd updates weights per individual sample or mini-batch", "batch gd uses entire dataset per epoch", "faster iterations vs noise"],
+            "difficulty": "easy",
+            "topic_aspect": "sgd_vs_batch",
+        },
+        {
+            "question": "What role does the 'Momentum' hyperparameter play in accelerating gradient descent through ravines?",
+            "expected_concepts": ["momentum adds fraction of past update vector", "dampens oscillations", "accelerates through flat surfaces"],
+            "difficulty": "medium",
+            "topic_aspect": "momentum",
+        },
+        {
+            "question": "How does the Adam optimizer combine the advantages of Momentum and RMSprop?",
+            "expected_concepts": ["adaptive learning rates", "first moment (mean of gradients)", "second moment (uncentered variance)", "bias correction"],
+            "difficulty": "medium",
+            "topic_aspect": "adam_optimizer",
+        },
+        {
+            "question": "Why is choosing a learning rate that is too high or too low detrimental during neural network training?",
+            "expected_concepts": ["too high causes divergence/oscillation", "too low causes very slow convergence or local minima entrapment"],
+            "difficulty": "easy",
+            "topic_aspect": "learning_rate_tuning",
+        },
+        {
+            "question": "How does RMSprop prevent the learning rate from diminishing to zero compared to standard AdaGrad?",
+            "expected_concepts": ["exponentially decaying average of squared gradients", "prevents continuous accumulation of historical gradients"],
+            "difficulty": "medium",
+            "topic_aspect": "rmsprop",
+        },
+        {
+            "question": "How do you evaluate whether an optimizer has converged successfully by inspecting training and validation loss curves?",
+            "expected_concepts": ["loss curve flattening", "minimal validation loss", "checking for divergence or overfitting gap"],
+            "difficulty": "medium",
+            "topic_aspect": "convergence_evaluation",
+        },
+    ],
+    "VGG16 Transfer Learning": [
+        {
+            "question": "What is the concept of Transfer Learning, and why is a pre-trained VGG16 model effective for image classification?",
+            "expected_concepts": ["transfer learning leverages features learned on ImageNet", "pre-trained weights", "reduces training time and data requirements"],
+            "difficulty": "easy",
+            "topic_aspect": "transfer_learning_concept",
+        },
+        {
+            "question": "Why are the convolutional base layers frozen (trainable=False) when fine-tuning VGG16 on a new custom face dataset?",
+            "expected_concepts": ["freezing prevents destroying pre-trained feature extractors", "retains generic edges/textures", "trains only new classifier head"],
+            "difficulty": "medium",
+            "topic_aspect": "layer_freezing",
+        },
+        {
+            "question": "How do data augmentation techniques such as rotation and brightness adjustments improve classification accuracy and reduce overfitting?",
+            "expected_concepts": ["data augmentation increases dataset diversity", "synthesizes variations", "enhances model generalization"],
+            "difficulty": "easy",
+            "topic_aspect": "data_augmentation",
+        },
+        {
+            "question": "What is the role of the Flatten and Dense layers added on top of the VGG16 feature extractor?",
+            "expected_concepts": ["flatten converts 2D feature maps to 1D vector", "dense layers perform high-level classification", "softmax output for classes"],
+            "difficulty": "medium",
+            "topic_aspect": "classification_head",
+        },
+        {
+            "question": "Why are input images resized to 224x224 pixels before passing them into the VGG16 network?",
+            "expected_concepts": ["vgg16 architecture fixed input resolution 224x224x3", "standard tensor shape for convolutional blocks"],
+            "difficulty": "easy",
+            "topic_aspect": "input_preprocessing",
+        },
+        {
+            "question": "How does a custom callback like EarlyStopping or AccuracyThreshold help in training the transfer model efficiently?",
+            "expected_concepts": ["callbacks monitor metrics during training", "stops training when target accuracy is reached", "prevents overfitting"],
+            "difficulty": "medium",
+            "topic_aspect": "callbacks_monitoring",
+        },
+    ],
+    "ResNet-50 Transfer Learning": [
+        {
+            "question": "What is the fundamental architectural innovation of 'Residual Connections' (skip connections) in ResNet-50?",
+            "expected_concepts": ["skip connections add input x to F(x)", "identity mapping", "mitigates vanishing gradients in very deep networks"],
+            "difficulty": "medium",
+            "topic_aspect": "residual_skip_connections",
+        },
+        {
+            "question": "How do bottleneck blocks in ResNet-50 (1x1, 3x3, 1x1 convolutions) reduce computational complexity?",
+            "expected_concepts": ["1x1 convolution reduces channel depth", "3x3 spatial convolution", "1x1 expands channels", "computational efficiency"],
+            "difficulty": "medium",
+            "topic_aspect": "bottleneck_architecture",
+        },
+        {
+            "question": "Why does ResNet-50 perform significantly better on complex image datasets compared to shallower standard CNNs?",
+            "expected_concepts": ["depth enables multi-scale hierarchical feature extraction", "50 layers deep without gradient degradation", "higher representational capacity"],
+            "difficulty": "easy",
+            "topic_aspect": "deep_representations",
+        },
+        {
+            "question": "What is the difference between feature extraction (freezing all base layers) and fine-tuning (unfreezing top residual blocks) in ResNet-50?",
+            "expected_concepts": ["feature extraction trains only top dense layers", "fine-tuning updates high-level residual weights with low learning rate"],
+            "difficulty": "medium",
+            "topic_aspect": "fine_tuning_strategy",
+        },
+        {
+            "question": "What role does Global Average Pooling (GAP) play before the final classification layer in ResNet-50?",
+            "expected_concepts": ["global average pooling replaces heavy flatten layer", "averages spatial feature maps", "drastically reduces parameter count"],
+            "difficulty": "medium",
+            "topic_aspect": "global_average_pooling",
+        },
+        {
+            "question": "How do learning rate schedulers and weight decay regularizers prevent overfitting when training ResNet-50?",
+            "expected_concepts": ["learning rate decay improves fine convergence", "weight decay penalizes large weights", "stabilizes gradient steps"],
+            "difficulty": "medium",
+            "topic_aspect": "regularization_optimization",
+        },
+    ],
+    "Custom CNN Models": [
+        {
+            "question": "In a Convolutional Neural Network, what operation does a 2D convolution filter (kernel) perform on an input image?",
+            "expected_concepts": ["element-wise multiplication and summation", "sliding dot product across spatial grid", "extracting feature maps"],
+            "difficulty": "easy",
+            "topic_aspect": "convolution_operation",
+        },
+        {
+            "question": "What is the primary function of MaxPooling layers in a CNN, and how does pooling achieve translation invariance?",
+            "expected_concepts": ["downsampling spatial dimensions", "reducing parameter count and computation", "extracting dominant features", "spatial invariance"],
+            "difficulty": "easy",
+            "topic_aspect": "pooling_layers",
+        },
+        {
+            "question": "What do 'padding' (e.g. valid vs same) and 'stride' control in the spatial size of output feature maps?",
+            "expected_concepts": ["padding preserves boundary information", "same padding maintains input dimension", "stride controls filter step size"],
+            "difficulty": "medium",
+            "topic_aspect": "padding_and_stride",
+        },
+        {
+            "question": "How does the Dropout regularization layer prevent co-adaptation of neurons in CNN classification layers?",
+            "expected_concepts": ["randomly deactivates fraction of neurons during training", "forces redundant representations", "reduces overfitting"],
+            "difficulty": "medium",
+            "topic_aspect": "dropout_regularization",
+        },
+        {
+            "question": "Why do earlier convolutional layers capture low-level features (edges, textures) while deeper layers capture high-level semantic shapes?",
+            "expected_concepts": ["hierarchical feature learning", "receptive field increases with depth", "composition of lower-level patterns"],
+            "difficulty": "medium",
+            "topic_aspect": "hierarchical_features",
+        },
+        {
+            "question": "How do you interpret the training vs validation accuracy curve to detect overfitting in your custom CNN model?",
+            "expected_concepts": ["widening gap between high training accuracy and low validation accuracy", "validation loss increasing while train loss drops"],
+            "difficulty": "easy",
+            "topic_aspect": "training_curves",
+        },
+    ],
+    "Sequential Prediction (LSTM & GRU)": [
+        {
+            "question": "Why do standard Recurrent Neural Networks (RNNs) struggle with long-term temporal dependencies, and how does LSTM solve this?",
+            "expected_concepts": ["exploding and vanishing gradient problem", "lstm introduces cell state highway and gating mechanisms", "preserves long-term memory"],
+            "difficulty": "medium",
+            "topic_aspect": "lstm_memory_cell",
+        },
+        {
+            "question": "What are the three distinct gates in an LSTM cell (Forget, Input, Output), and what is the role of the Forget gate?",
+            "expected_concepts": ["forget gate decides what information to discard from cell state", "input gate updates cell state", "output gate filters hidden state"],
+            "difficulty": "easy",
+            "topic_aspect": "lstm_gates",
+        },
+        {
+            "question": "How does a Gated Recurrent Unit (GRU) simplify the LSTM architecture while retaining sequential modeling capabilities?",
+            "expected_concepts": ["combines hidden state and cell state", "uses two gates: update gate and reset gate", "fewer parameters and faster training"],
+            "difficulty": "medium",
+            "topic_aspect": "gru_architecture",
+        },
+        {
+            "question": "In sequential character prediction, how are discrete characters converted into numeric representations before passing to the LSTM?",
+            "expected_concepts": ["one-hot encoding or token embedding", "mapping characters to integer vocabulary indices", "sequential tensor format"],
+            "difficulty": "easy",
+            "topic_aspect": "character_encoding",
+        },
+        {
+            "question": "What role does the 'temperature' parameter play when sampling predictions from the Softmax probabilities of a character model?",
+            "expected_concepts": ["temperature scales logit distribution", "low temperature produces deterministic/conservative text", "high temperature increases diversity/randomness"],
+            "difficulty": "medium",
+            "topic_aspect": "temperature_sampling",
+        },
+        {
+            "question": "How does Teacher Forcing improve training convergence during sequence-to-sequence or sequential character generation?",
+            "expected_concepts": ["passing ground truth previous token as input during training instead of model prediction", "stabilizes gradient updates"],
+            "difficulty": "medium",
+            "topic_aspect": "teacher_forcing",
+        },
+    ],
+    "StyleGANs": [
+        {
+            "question": "In a Generative Adversarial Network (GAN), what are the competing objectives of the Generator and the Discriminator?",
+            "expected_concepts": ["generator creates realistic synthetic samples to fool discriminator", "discriminator classifies real vs fake samples", "minimax game"],
+            "difficulty": "easy",
+            "topic_aspect": "gan_minimax",
+        },
+        {
+            "question": "What is the key architectural difference between standard GANs and StyleGAN's mapping network and style-based generator?",
+            "expected_concepts": ["mapping network maps latent z to intermediate space w", "disentangles feature representations", "adaptive instance normalization AdaIN"],
+            "difficulty": "medium",
+            "topic_aspect": "stylegan_architecture",
+        },
+        {
+            "question": "How does Adaptive Instance Normalization (AdaIN) transfer style parameters to feature maps at each resolution level in StyleGAN?",
+            "expected_concepts": ["adain normalizes feature map channels to zero mean and unit variance", "scales and shifts with learned style vectors (y_s, y_b)"],
+            "difficulty": "medium",
+            "topic_aspect": "adain_mechanism",
+        },
+        {
+            "question": "What is 'disentangled latent space' in StyleGAN, and why is it beneficial for controlling visual attributes (pose, hair, expression)?",
+            "expected_concepts": ["independent control of individual semantic attributes", "intermediate w space avoids correlation", "linear attribute interpolation"],
+            "difficulty": "medium",
+            "topic_aspect": "latent_space_disentanglement",
+        },
+        {
+            "question": "How does Progressive Growing stabilize GAN training from low resolutions (4x4) to high resolutions (1024x1024)?",
+            "expected_concepts": ["starts training on low-resolution images", "incrementally adds higher-resolution layers", "stabilizes adversarial dynamics"],
+            "difficulty": "medium",
+            "topic_aspect": "progressive_growing",
+        },
+        {
+            "question": "What is 'Mode Collapse' in GAN training, and what symptom indicates that the generator has collapsed?",
+            "expected_concepts": ["mode collapse occurs when generator produces limited identical samples", "loss of sample diversity", "discriminator fails to penalize repetition"],
+            "difficulty": "medium",
+            "topic_aspect": "mode_collapse",
+        },
+    ],
+    "Audio Classification (LSTM & GRU)": [
+        {
+            "question": "In audio data classification, what are Mel-Frequency Cepstral Coefficients (MFCCs) and why are they used to represent audio signals?",
+            "expected_concepts": ["mfccs capture spectral envelope of audio", "mel scale matches human auditory perception", "compact feature representation of speech/sound"],
+            "difficulty": "easy",
+            "topic_aspect": "mfcc_features",
+        },
+        {
+            "question": "How does Short-Time Fourier Transform (STFT) convert a 1D raw audio waveform into a 2D Time-Frequency Spectrogram?",
+            "expected_concepts": ["divides audio into overlapping short windowed frames", "computes fourier transform per window", "generates time-frequency magnitude matrix"],
+            "difficulty": "medium",
+            "topic_aspect": "stft_spectrogram",
+        },
+        {
+            "question": "Why are sequential architectures like LSTM or GRU well-suited for processing extracted audio feature sequences?",
+            "expected_concepts": ["audio is inherently sequential time-series data", "lstm models temporal transitions between consecutive frames", "captures acoustic dynamics"],
+            "difficulty": "easy",
+            "topic_aspect": "temporal_modeling",
+        },
+        {
+            "question": "What role does audio sampling rate (e.g. 16kHz or 44.1kHz) play in preserving frequency information according to the Nyquist theorem?",
+            "expected_concepts": ["nyquist rate requires sampling at least twice the highest frequency", "preserves audible frequencies without aliasing"],
+            "difficulty": "medium",
+            "topic_aspect": "sampling_rate",
+        },
+        {
+            "question": "How does applying data augmentation like time stretching, pitch shifting, or background noise addition improve audio model robustness?",
+            "expected_concepts": ["audio augmentation introduces realistic acoustic variations", "prevents overfitting to recording environment", "enhances generalization"],
+            "difficulty": "medium",
+            "topic_aspect": "audio_augmentation",
+        },
+        {
+            "question": "What evaluation metrics are most appropriate for evaluating multi-class audio classification performance on imbalanced audio datasets?",
+            "expected_concepts": ["f1-score", "precision", "recall", "confusion matrix", "unweighted average recall"],
+            "difficulty": "medium",
+            "topic_aspect": "audio_metrics",
+        },
+    ],
+    "Human Detection in Thermal Images": [
+        {
+            "question": "How do thermal infrared images differ from standard RGB images in terms of pixel intensity representing heat radiation?",
+            "expected_concepts": ["thermal intensity represents infrared surface temperature", "invariant to ambient lighting and darkness", "single-channel heat radiation contrast"],
+            "difficulty": "easy",
+            "topic_aspect": "thermal_imaging_physics",
+        },
+        {
+            "question": "Why is human body temperature contrast particularly advantageous for object detection in low-light or foggy conditions?",
+            "expected_concepts": ["human body emits distinct body temperature signature (around 37C)", "high contrast against cooler background", "unaffected by shadows"],
+            "difficulty": "easy",
+            "topic_aspect": "temperature_contrast",
+        },
+        {
+            "question": "How do deep learning object detection networks predict bounding box coordinates and confidence scores for detected persons?",
+            "expected_concepts": ["bounding box regression (x, y, width, height)", "objectness confidence score", "class probability distribution"],
+            "difficulty": "medium",
+            "topic_aspect": "bounding_box_regression",
+        },
+        {
+            "question": "What is Non-Maximum Suppression (NMS), and how does it eliminate redundant overlapping bounding boxes around the same person?",
+            "expected_concepts": ["intersection over union (IoU) thresholding", "retains box with highest confidence", "suppresses redundant overlapping boxes"],
+            "difficulty": "medium",
+            "topic_aspect": "non_maximum_suppression",
+        },
+        {
+            "question": "What environmental challenges (e.g., warm background objects, heated machinery) cause false positive detections in thermal imaging?",
+            "expected_concepts": ["thermal artifacts matching human body heat", "heated radiators/engines", "solar-heated walls creating thermal clutter"],
+            "difficulty": "medium",
+            "topic_aspect": "thermal_challenges",
+        },
+        {
+            "question": "How is Mean Average Precision (mAP at IoU=0.50) calculated to measure the detection accuracy of human detection models?",
+            "expected_concepts": ["area under precision-recall curve", "iou threshold 0.50 for true positives", "mean across classes"],
+            "difficulty": "medium",
+            "topic_aspect": "detection_evaluation",
+        },
+    ],
 }
 
 
 def _detect_topic_from_text(content: str, title: str = "") -> str:
     combined = (title + " " + content).lower()
     
-    # Priority matching for specific algorithms
+    # Priority matching for specific algorithms and laboratory titles
+    if re.search(r"thermal.*(?:image|human|detect)|human.*detect.*thermal", combined):
+        return "Human Detection in Thermal Images"
+    if re.search(r"audio.*(?:data|classif)|speech.*classif|mfcc", combined):
+        return "Audio Classification (LSTM & GRU)"
+    if re.search(r"stylegan|generative.*adversarial|latent.*space.*w", combined):
+        return "StyleGANs"
+    if re.search(r"sequential.*(?:character|predict)|lstm.*gru|gru.*lstm|character.*predict", combined):
+        return "Sequential Prediction (LSTM & GRU)"
+    if re.search(r"custom.*cnn|cnn.*model|convolutional.*neural.*network", combined):
+        return "Custom CNN Models"
+    if re.search(r"resnet|res.*net", combined):
+        return "ResNet-50 Transfer Learning"
+    if re.search(r"vgg16|vgg|face.*recognit.*transfer|transfer.*learning.*vgg", combined):
+        return "VGG16 Transfer Learning"
+    if re.search(r"optimizer|adam.*optimizer|sgd.*momentum|rmsprop", combined):
+        return "Optimizers in Neural Network"
+    if re.search(r"activation.*function|sigmoid.*relu|relu.*tanh", combined):
+        return "Activation Functions"
+    if re.search(r"single.*layer.*perceptron", combined):
+        return "Single Layer Perceptron"
+    if re.search(r"perceptron|understanding.*perceptron", combined):
+        return "Understanding the Perceptron"
     if re.search(r"multiple.*linear.*regression|multi.*linear.*regress", combined):
         return "Multiple Linear Regression"
     if re.search(r"simple.*linear.*regression|linear.*regression", combined):
@@ -457,47 +897,33 @@ def extract_experiment_topics_and_concepts(experiment_content: str, title: str =
     detected_topic = _detect_topic_from_text(material, title) or "Laboratory Experiment"
 
     # Extract all candidate domain terms from text
-    raw_concepts = concept_terms(material, 30)
+    raw_concepts = concept_terms(material, 35)
     filtered_terms = [
         c.replace("_", " ") for c in raw_concepts
         if len(c) > 3 and not c.isdigit() and len(c) < 25 and c.lower() not in _BANNED_UNRELATED_TERMS
     ]
 
-    # Categorize extracted elements based on content analysis
-    math_terms = []
-    param_terms = []
-    eval_terms = []
-    algo_terms = []
-
-    lower_mat = material.lower()
-    
-    # Mathematical / Formulation checks
-    for kw in ["slope", "intercept", "residual", "eigenvalue", "eigenvector", "entropy", "gain", "probability", "distance", "hyperplane", "margin", "dissimilarity", "least squares", "ols", "covariance"]:
-        if kw in lower_mat:
-            math_terms.append(kw)
-
-    # Parameters / Hyperparameters
-    for kw in ["epsilon", "eps", "min_samples", "k value", "max depth", "regularization c", "gamma", "alpha", "centroid", "medoid", "degrees of freedom"]:
-        if kw in lower_mat:
-            param_terms.append(kw)
-
-    # Evaluation / Results
-    for kw in ["r-squared", "adjusted r-squared", "mean squared error", "mse", "rmse", "accuracy", "silhouette score", "wcss", "inertia", "scree plot", "variance explained", "purity", "gini impurity"]:
-        if kw in lower_mat:
-            eval_terms.append(kw)
-
-    # Core algorithms
-    for kw in ["linear regression", "k-nearest neighbors", "decision tree", "naive bayes", "k-means", "k-medoids", "dbscan", "svm", "pca", "id3", "cart", "pam", "bayes theorem"]:
-        if kw in lower_mat:
-            algo_terms.append(kw)
+    # Extract embedded manual viva questions if present in content
+    embedded_viva_qs = []
+    lines = experiment_content.splitlines()
+    in_viva = False
+    for line in lines:
+        cleaned_line = clean(line)
+        if re.search(r"(?i)\bviva\s*questions?\b", cleaned_line):
+            in_viva = True
+            continue
+        if in_viva:
+            # Check for question line like "1. Q1 What is ...?" or "Q1. What ...?"
+            q_match = re.search(r"(?i)^(?:(?:\d+\.|\*|-)\s*)?q\d*[:.-]?\s*(.+\?)", cleaned_line)
+            if q_match:
+                candidate = q_match.group(1).strip()
+                if len(candidate) > 15:
+                    embedded_viva_qs.append(validate_and_clean_question(candidate))
 
     return {
         "topic": detected_topic,
         "key_terms": filtered_terms[:15],
-        "math_concepts": math_terms,
-        "parameters": param_terms,
-        "evaluation_metrics": eval_terms,
-        "algorithms": algo_terms,
+        "embedded_viva_questions": embedded_viva_qs,
     }
 
 
@@ -535,7 +961,7 @@ def ollama_available() -> bool:
         return False
 
 
-def ask_ollama(prompt: str, temperature: float = 0.2, timeout: int = 35) -> str:
+def ask_ollama(prompt: str, temperature: float = 0.2, timeout: int = 50) -> str:
     try:
         response = requests.post(
             OLLAMA_URL,
@@ -547,7 +973,7 @@ def ask_ollama(prompt: str, temperature: float = 0.2, timeout: int = 35) -> str:
                     "temperature": temperature,
                     "top_p": 0.9,
                     "num_ctx": 4096,
-                    "num_predict": 400,
+                    "num_predict": 450,
                 },
             },
             timeout=timeout,
@@ -563,21 +989,84 @@ def ask_ollama(prompt: str, temperature: float = 0.2, timeout: int = 35) -> str:
         raise RuntimeError(f"Ollama connection error: {exc}")
 
 
+def is_generic_question(q_text: str) -> bool:
+    """Detect if a viva question is generic, procedural, or template-like."""
+    if not q_text or not isinstance(q_text, str):
+        return True
+    lower = q_text.lower().strip()
+    generic_patterns = [
+        r"\bwhat is the objective\b",
+        r"\bwhat is the aim\b",
+        r"\bexplain the procedure\b",
+        r"\bdescribe the experiment\b",
+        r"\bwhat are the steps\b",
+        r"\bwhat is the title\b",
+        r"\bwhat did you learn\b",
+        r"\bwhat are the advantages\b",
+        r"\bwhat are the disadvantages\b",
+        r"\bwhat is the purpose of the experiment\b",
+        r"\bexplain the experiment\b",
+        r"\bwhat is the description\b",
+        r"\bwhat is machine learning\b",
+        r"\bwhat is deep learning\b",
+        r"\bwhat is python\b",
+        r"\bwhat is an experiment\b",
+        r"\bwhat tools are used\b",
+        r"\bhow does function within the algorithm\b",
+        r"\bspecifically chosen and evaluated in this laboratory\b",
+        r"\bwhat are the requirements\b",
+        r"\bwhat software was used\b",
+        r"\bwhat hardware was used\b",
+    ]
+    for pat in generic_patterns:
+        if re.search(pat, lower):
+            return True
+
+    # Check for trivial single-clause definition questions like "What is linear regression?" or "What is CNN?"
+    if re.match(r"^what is [a-z0-9 -]{2,20}\?$", lower):
+        return True
+    return False
+
+
+def contains_unrelated_tech_noise(q_text: str, experiment_content: str) -> bool:
+    """Check if question asks about computers/operating systems/hardware/software unless in experiment content."""
+    lower_q = q_text.lower()
+    exp_lower = experiment_content.lower()
+    for term in _BANNED_UNRELATED_TERMS:
+        if term in lower_q and term not in exp_lower:
+            return True
+    return False
+
+
+def _are_questions_sufficiently_different(q1: str, q2: str) -> bool:
+    """Ensure two questions in the same attempt test sufficiently different concepts."""
+    w1 = _extract_content_words(q1)
+    w2 = _extract_content_words(q2)
+    if not w1 or not w2:
+        return False
+    overlap = len(w1.intersection(w2))
+    jaccard = overlap / len(w1.union(w2))
+    if jaccard > 0.55:
+        return False
+    return True
+
+
 def validate_question(q_text: str, experiment_content: str, detected_topic: str) -> bool:
     """
     Validate that a generated viva question satisfies all strict requirements:
-    1. Not empty, length between 20 and 250 chars.
+    1. Not empty, length between 25 and 250 chars.
     2. Capitalized and ends with a question mark.
     3. Not generic / procedural / template question.
     4. Does not contain banned unrelated computer/hardware/programming jargon.
     5. Directly relates to the experiment topic / content (key concepts present in experiment).
     6. Easy-to-moderate undergraduate laboratory difficulty.
+    7. Clear, natural English suitable for an oral viva.
     """
     if not q_text or not isinstance(q_text, str):
         return False
 
     q_text = q_text.strip()
-    if len(q_text) < 20 or len(q_text) > 250:
+    if len(q_text) < 25 or len(q_text) > 250:
         return False
 
     if not q_text.endswith("?"):
@@ -586,39 +1075,20 @@ def validate_question(q_text: str, experiment_content: str, detected_topic: str)
     if not q_text[0].isupper():
         return False
 
-    lower_q = q_text.lower()
-
-    # Banned generic heading / procedural phrases
-    banned_generic = [
-        "what is the objective",
-        "what is the aim",
-        "explain the procedure",
-        "describe the experiment",
-        "what are the steps",
-        "what is the title",
-        "what is the description",
-        "what did you learn",
-        "what are the advantages",
-        "what are the disadvantages",
-        "what is the purpose of the experiment",
-        "explain the experiment",
-        "what is linear regression?",
-        "what is decision tree?",
-        "what is knn?",
-        "what is k-means?",
-        "what is machine learning?",
-        "what is python?",
-    ]
-    if any(phrase in lower_q for phrase in banned_generic):
+    # Check for private unicode or corrupt glyphs
+    if any(ord(ch) > 0xE000 and ord(ch) < 0xF8FF for ch in q_text) or "\ufffd" in q_text:
         return False
 
-    # Banned unrelated general computer/hardware/programming noise
-    for term in _BANNED_UNRELATED_TERMS:
-        if term in lower_q and term not in experiment_content.lower():
-            return False
+    # Check generic phrasing
+    if is_generic_question(q_text):
+        return False
+
+    # Check unrelated computer jargon
+    if contains_unrelated_tech_noise(q_text, experiment_content):
+        return False
 
     # Validate relation to experiment: must contain at least one content word from topic or experiment
-    topic_words = set(re.findall(r"\w+", (detected_topic or "").lower())) - _EVAL_STOP_WORDS
+    topic_words = set(re.findall(r"[A-Za-z0-9_]{3,}", (detected_topic or "").lower())) - _EVAL_STOP_WORDS
     exp_words = _extract_content_words(experiment_content)
     q_words = _extract_content_words(q_text)
 
@@ -644,29 +1114,6 @@ def validate_and_clean_question(raw_q: str) -> str:
     return text
 
 
-def is_generic_question(q_text: str) -> bool:
-    lower_q = (q_text or "").lower()
-    banned_phrases = [
-        "what is the objective",
-        "what is the aim",
-        "explain the procedure",
-        "describe the experiment",
-        "what are the steps",
-        "what is the title",
-        "what is the description",
-        "what did you learn",
-        "what are the advantages",
-        "what are the disadvantages",
-        "what is the purpose of the experiment",
-        "explain the experiment",
-        "what is linear regression?",
-        "what is decision tree?",
-        "what is knn?",
-        "what is k-means?",
-    ]
-    return any(phrase in lower_q for phrase in banned_phrases)
-
-
 def generate_viva_questions(
     experiment_content: str,
     count: int = QUESTIONS_PER_VIVA,
@@ -681,7 +1128,7 @@ def generate_viva_questions(
     - Technical topics and concepts are extracted from the experiment beforehand.
     - Each question tests a different topic/concept aspect from that experiment.
     - Questions vary across different experiments and across multiple attempts for the same experiment.
-    - Full relevant experiment content is passed to the LLM when available.
+    - Full relevant experiment content is passed to the LLM.
     - All generated questions undergo strict 7-point validation; invalid ones are discarded.
     """
     raw_material = clean(experiment_content)
@@ -693,70 +1140,84 @@ def generate_viva_questions(
     # 1. Extract specific technical topics and concepts from the experiment
     extracted_meta = extract_experiment_topics_and_concepts(raw_material, title)
     detected_topic = extracted_meta["topic"]
-
-    # Deterministic variation seed combining student_id and attempt_number
-    seed_val = (student_id or 0) * 100 + (attempt_number or 1)
-
-    # Topic and attempt-inclusive cache key
-    content_hash = hashlib.md5(raw_material[:500].encode("utf-8")).hexdigest()
-    cache_key = f"{detected_topic}_{count}_{seed_val}_{content_hash}"
-
-    if cache_key in _EXPERIMENT_QUESTION_CACHE:
-        cached = _EXPERIMENT_QUESTION_CACHE[cache_key]
-        if len(cached) == count:
-            return cached
+    key_terms = extracted_meta["key_terms"]
 
     target_count = count
+    valid_questions: list[dict] = []
+    seen_texts: set[str] = set()
 
-    def _request_llm_questions(num_needed: int, existing_questions: list[str]) -> list[dict]:
-        avoid_str = ""
-        if existing_questions:
-            avoid_str = "\nDo NOT repeat these existing questions: " + "; ".join(existing_questions)
+    # Define technical aspect rotational foci across attempts
+    aspect_sets = [
+        [
+            ("Core Mathematical Formulation", "mathematical equations, formulas, loss function, or objective criteria"),
+            ("Algorithm Mechanics & Parameters", "model parameters, internal step mechanics, or hyperparameter roles"),
+            ("Evaluation & Result Interpretation", "performance metrics, output interpretation, or error analysis"),
+        ],
+        [
+            ("Dataset & Feature Preprocessing", "input features, data dimensions, scaling, or variable roles"),
+            ("Hyperparameter Tuning & Behavior", "tuning parameters, convergence dynamics, or outlier handling"),
+            ("Algorithm Structure & Architecture", "structural components, decision boundaries, or layer functions"),
+        ],
+        [
+            ("Practical Edge Cases & Trade-offs", "overfitting, variance/bias tradeoffs, or practical limitations"),
+            ("Comparative Mechanics & Formulation", "mathematical formulation compared to alternatives or baseline"),
+            ("Output Metrics & Interpretation", "interpreting validation metrics, score thresholds, or classification results"),
+        ],
+    ]
 
-        key_terms_str = ", ".join(extracted_meta["key_terms"][:10])
-        
-        # Guide attempt focus to ensure variation between attempts
-        attempt_focus_map = [
-            "Focus on mathematical formulations, parameter definitions, and core principles.",
-            "Focus on algorithm mechanics, data preprocessing, and evaluation metrics.",
-            "Focus on hyperparameter tuning, outlier handling, and result interpretation.",
-        ]
-        focus_guide = attempt_focus_map[(attempt_number - 1) % len(attempt_focus_map)]
+    current_aspect_set = aspect_sets[(attempt_number - 1) % len(aspect_sets)]
+
+    def _try_llm_generation() -> list[dict]:
+        aspect_instructions = "\n".join(
+            f"- Question {i+1} must test: {asp_name} ({asp_desc})."
+            for i, (asp_name, asp_desc) in enumerate(current_aspect_set)
+        )
+        key_terms_str = ", ".join(key_terms[:10]) if key_terms else detected_topic
+
+        # Full relevant experiment content passed directly to LLM (up to 7,500 chars)
+        content_slice = raw_material[:7500]
 
         prompt = f"""You are an undergraduate university laboratory viva examiner.
 
-EXPERIMENT TOPIC: {detected_topic or 'Machine Learning Laboratory'}
-EXTRACTED CONCEPTS: {key_terms_str}
-ATTEMPT VARIATION FOCUS: {focus_guide}
+EXPERIMENT TOPIC: {detected_topic}
+EXTRACTED TECHNICAL CONCEPTS: {key_terms_str}
 
-Generate EXACTLY {num_needed} clear, easy-to-moderate viva questions specifically testing the technical concepts, algorithms, parameters, formulas, datasets, and results of THIS particular experiment.{avoid_str}
+Generate EXACTLY {target_count + 1} clear, easy-to-moderate viva questions specifically testing the technical concepts, parameters, formulas, datasets, and results of THIS particular experiment.
 
-STRICT EXAMINER GUIDELINES:
-1. Every question MUST specifically test the concepts, parameters, formulas, methods, or outputs of THIS experiment: {detected_topic}.
-2. Questions MUST test DIFFERENT technical concepts from this experiment (e.g. one question on mathematical/formula components, one on algorithm mechanics/parameters, one on evaluation/interpretation).
-3. Questions MUST be easy-to-moderate undergraduate viva level: clear, natural English, with flawless grammar and spelling.
+EXAMINER GUIDELINES FOR THIS ATTEMPT:
+{aspect_instructions}
+
+STRICT EXAMINER RULES:
+1. Every question MUST specifically test the actual subject matter of THIS experiment: {detected_topic}.
+2. Each question MUST test a DIFFERENT technical concept from this experiment.
+3. Easy-to-moderate undergraduate viva level: clear, natural English, grammatically correct.
 4. STRICT PROHIBITIONS:
-   - NEVER ask generic questions like "What is the objective?", "Explain the procedure", "What did you learn?", "What are the advantages?", "What are the steps?".
-   - NEVER ask about general computers, operating systems, software, hardware, coding syntax, or programming languages unless explicitly part of the experiment.
-5. Questions must be answerable from the experiment material below.
+   - NEVER ask generic questions like "What is the objective?", "Explain the procedure", "What did you learn?", "What are the advantages?".
+   - NEVER ask about generic computers, operating systems, software, coding syntax, or programming languages.
 
 Return STRICT JSON ONLY:
-{{"questions": [{{"question": "Technically focused viva question about this experiment?", "expected_concepts": ["concept1", "concept2"], "difficulty": "medium"}}]}}
+{{"questions": [
+  {{"question": "Viva question testing concept 1?", "expected_concepts": ["concept1", "concept2"], "difficulty": "easy"}},
+  {{"question": "Viva question testing concept 2?", "expected_concepts": ["concept1", "concept2"], "difficulty": "medium"}},
+  {{"question": "Viva question testing concept 3?", "expected_concepts": ["concept1", "concept2"], "difficulty": "medium"}},
+  {{"question": "Viva question testing concept 4?", "expected_concepts": ["concept1", "concept2"], "difficulty": "medium"}}
+]}}
 
-FULL EXPERIMENT CONTENT:
-{raw_material[:7000]}"""
+EXPERIMENT CONTENT:
+{content_slice}"""
 
-        raw = ask_ollama(prompt, temperature=0.25 + ((attempt_number - 1) * 0.05), timeout=30)
+        temp = 0.2 + (((attempt_number - 1) % 4) * 0.08)
+        raw = ask_ollama(prompt, temperature=temp, timeout=40)
         payload = parse_json_object(raw)
         if not payload or not isinstance(payload.get("questions"), list):
             return []
 
-        results = []
+        candidates = []
         for item in payload["questions"]:
             if not isinstance(item, dict):
                 continue
             q_text = validate_and_clean_question(item.get("question") or "")
-            if not validate_question(q_text, raw_material, detected_topic):
+            if not q_text:
                 continue
 
             exp_concepts = item.get("expected_concepts") or []
@@ -768,48 +1229,46 @@ FULL EXPERIMENT CONTENT:
             if diff not in {"easy", "medium", "hard"}:
                 diff = "medium"
 
-            results.append(
+            candidates.append(
                 {
                     "question": q_text,
-                    "expected_concepts": exp_concepts,
+                    "expected_concepts": exp_concepts if exp_concepts else key_terms[:3],
                     "difficulty": diff,
                 }
             )
-        return results
+        return candidates
 
-    valid_questions: list[dict] = []
-    seen_texts: set[str] = set()
-    seen_aspects: set[str] = set()
-
-    # 1. Try LLM generation first if Ollama is available
+    # 1. Try LLM Generation if Ollama is available
     if ollama_available():
         try:
-            llm_batch = _request_llm_questions(target_count, [])
-            for q in llm_batch:
-                key = q["question"].lower()
-                if key not in seen_texts:
-                    seen_texts.add(key)
-                    valid_questions.append(q)
+            llm_candidates = _try_llm_generation()
+            for cand in llm_candidates:
+                q_text = cand["question"]
+                if not validate_question(q_text, raw_material, detected_topic):
+                    continue
+                key = q_text.lower()
+                if key in seen_texts:
+                    continue
+                if any(not _are_questions_sufficiently_different(q_text, v["question"]) for v in valid_questions):
+                    continue
+                seen_texts.add(key)
+                valid_questions.append(cand)
+                if len(valid_questions) >= target_count:
+                    break
         except Exception:
             pass
 
-    # 2. Fill from dedicated topic-specific question bank (guarantees 100% topic accuracy, no generic templates, and multi-attempt variety)
+    # 2. If additional questions needed, check topic question bank (rotated by attempt & student ID)
     if len(valid_questions) < target_count and detected_topic in _TOPIC_QUESTION_BANKS:
         topic_bank = _TOPIC_QUESTION_BANKS[detected_topic]
-        
-        # Stride rotation using attempt_number & student_id to sample distinct question subsets per attempt
-        # Attempt 1 -> takes questions starting at offset 0 (e.g. idx 0, 1, 2)
-        # Attempt 2 -> takes questions starting at offset 3 (e.g. idx 3, 4, 5)
-        # Attempt 3 -> takes questions starting at offset 1 (e.g. idx 1, 3, 5)
-        stride_offset = (attempt_number - 1) * 3 + (student_id or 0)
+        stride_offset = ((attempt_number - 1) * 3) + ((student_id or 0) % len(topic_bank))
         start_idx = stride_offset % len(topic_bank)
-        
+
         ordered_candidates = []
         for i in range(len(topic_bank)):
             idx = (start_idx + i) % len(topic_bank)
             ordered_candidates.append(topic_bank[idx])
 
-        # First pass: pick distinct topic aspects
         for item in ordered_candidates:
             if len(valid_questions) >= target_count:
                 break
@@ -817,74 +1276,38 @@ FULL EXPERIMENT CONTENT:
             if not validate_question(q_text, raw_material, detected_topic):
                 continue
             key = q_text.lower()
-            aspect = item.get("topic_aspect", "")
-            
-            if key not in seen_texts:
-                if aspect and aspect in seen_aspects and len(valid_questions) < target_count - 1:
-                    continue
-                seen_texts.add(key)
-                if aspect:
-                    seen_aspects.add(aspect)
-                valid_questions.append({
-                    "question": q_text,
-                    "expected_concepts": item["expected_concepts"],
-                    "difficulty": item["difficulty"],
-                })
+            if key in seen_texts:
+                continue
+            if any(not _are_questions_sufficiently_different(q_text, v["question"]) for v in valid_questions):
+                continue
+            seen_texts.add(key)
+            valid_questions.append({
+                "question": q_text,
+                "expected_concepts": item["expected_concepts"],
+                "difficulty": item["difficulty"],
+            })
 
-        # Second pass: fill remaining if needed
-        if len(valid_questions) < target_count:
-            for item in ordered_candidates:
-                if len(valid_questions) >= target_count:
-                    break
-                q_text = validate_and_clean_question(item["question"])
-                if not validate_question(q_text, raw_material, detected_topic):
-                    continue
-                key = q_text.lower()
-                if key not in seen_texts:
-                    seen_texts.add(key)
-                    valid_questions.append({
-                        "question": q_text,
-                        "expected_concepts": item["expected_concepts"],
-                        "difficulty": item["difficulty"],
-                    })
-
-    # 3. For custom uploaded manuals, dynamically generate questions strictly grounded in the extracted concepts & parameters
-    if len(valid_questions) < target_count:
-        clean_terms = extracted_meta["key_terms"]
-        if not clean_terms:
-            clean_terms = ["model parameters", "evaluation metric", "dataset features", "training process"]
-
-        shift = seed_val % len(clean_terms)
-        rotated_terms = clean_terms[shift:] + clean_terms[:shift]
-
-        custom_patterns = [
-            ("In this experiment, how does {c} function within the algorithm, and what role does it play?", ["concept identification", "role"]),
-            ("Why is {c} specifically chosen and evaluated in this laboratory experiment?", ["method rationale", "evaluation"]),
-            ("How does tuning or optimizing {c} influence the final output and accuracy in this experiment?", ["parameter tuning", "accuracy"]),
-            ("What key metric or observation regarding {c} indicates that the model has trained successfully?", ["result interpretation", "metric"]),
-            ("In what practical engineering scenario would you apply the {c} technique demonstrated here?", ["practical application", "scenario"]),
-        ]
-        t_shift = seed_val % len(custom_patterns)
-        rotated_patterns = custom_patterns[t_shift:] + custom_patterns[:t_shift]
-
-        for idx, (tmpl, tmpl_concepts) in enumerate(rotated_patterns):
+    # 3. If still needed, check embedded manual viva questions
+    if len(valid_questions) < target_count and extracted_meta.get("embedded_viva_questions"):
+        for emb_q in extracted_meta["embedded_viva_questions"]:
             if len(valid_questions) >= target_count:
                 break
-            term = rotated_terms[idx % len(rotated_terms)]
-            formatted_q = validate_and_clean_question(tmpl.format(c=term))
-            if validate_question(formatted_q, raw_material, detected_topic):
-                key = formatted_q.lower()
-                if key not in seen_texts:
-                    seen_texts.add(key)
-                    valid_questions.append({
-                        "question": formatted_q,
-                        "expected_concepts": tmpl_concepts + [term],
-                        "difficulty": "medium",
-                    })
+            clean_emb = validate_and_clean_question(emb_q)
+            if not validate_question(clean_emb, raw_material, detected_topic):
+                continue
+            key = clean_emb.lower()
+            if key in seen_texts:
+                continue
+            if any(not _are_questions_sufficiently_different(clean_emb, v["question"]) for v in valid_questions):
+                continue
+            seen_texts.add(key)
+            valid_questions.append({
+                "question": clean_emb,
+                "expected_concepts": key_terms[:4],
+                "difficulty": "medium",
+            })
 
-    final_questions = valid_questions[:target_count]
-    _EXPERIMENT_QUESTION_CACHE[cache_key] = final_questions
-    return final_questions
+    return valid_questions[:target_count]
 
 
 def evaluate_answer(
@@ -1008,7 +1431,7 @@ Return STRICT JSON ONLY:
     if ollama_available():
         def _attempt_eval(attempt_idx: int) -> dict:
             temp = 0.0 if attempt_idx == 0 else 0.1
-            raw = ask_ollama(prompt, temperature=temp, timeout=30)
+            raw = ask_ollama(prompt, temperature=temp, timeout=35)
             parsed = parse_json_object(raw)
             if not parsed or not isinstance(parsed, dict):
                 raise ValueError("Invalid JSON response from Ollama evaluation.")
