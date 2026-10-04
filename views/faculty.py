@@ -20,12 +20,12 @@ from views.theme import banner
 def render_faculty(user: User) -> None:
     banner(
         f"Faculty console · {user.full_name}",
-        "Upload laboratory manuals, configure viva parameters (fullscreen exit limits, question counts), and monitor student performance.",
+        "Upload laboratory manuals, configure viva parameters, and monitor student performance.",
         user.email,
     )
 
     upload_tab, review_tab, results_tab = st.tabs(
-        ["Upload manual", "Review & Configure", "Student attempts & Violations"]
+        ["Upload manual", "Review & Configure", "Student attempts & Evaluation"]
     )
 
     # =========================================================
@@ -83,7 +83,6 @@ def render_faculty(user: User) -> None:
                     )
 
                     st.session_state["faculty_manual_id"] = manual.id
-
                     st.rerun()
 
                 except Exception as exc:
@@ -150,41 +149,32 @@ def render_faculty(user: User) -> None:
                 with c3:
                     st.caption("Published manuals are visible to students.")
 
-                st.markdown("---")
+                st.divider()
                 st.markdown("### Viva assessment settings")
-                st.caption("Configure anti-cheating rule constraints and question count for this manual.")
+                st.caption("Configure viva parameters and question count for this manual.")
 
-                s_col1, s_col2, s_col3 = st.columns([2, 2, 1])
+                s_col1, s_col2 = st.columns([2, 1])
                 with s_col1:
-                    allowed_exits = st.number_input(
-                        "Allowed fullscreen exits",
-                        min_value=0,
-                        max_value=10,
-                        value=int(getattr(manual, "allowed_exits", 3) or 3),
-                        help="Number of times a student can temporarily leave fullscreen before the exam automatically terminates.",
-                        key=f"exits_{manual.id}",
-                    )
-                with s_col2:
                     q_count = st.number_input(
                         "Viva question count",
                         min_value=1,
                         max_value=10,
-                        value=int(getattr(manual, "question_count", 5) or 5),
+                        value=int(getattr(manual, "question_count", 3) or 3),
                         help="Number of viva questions generated per attempt.",
                         key=f"qcount_{manual.id}",
                     )
-                with s_col3:
+                with s_col2:
                     st.write("")
                     st.write("")
                     if st.button("Save settings", key=f"save_sett_{manual.id}", use_container_width=True):
                         try:
-                            update_manual_settings(manual.id, allowed_exits, q_count)
+                            update_manual_settings(manual.id, question_count=q_count)
                             st.success("Viva settings updated.")
                             st.rerun()
                         except Exception as exc:
                             st.error(str(exc))
 
-                st.markdown("---")
+                st.divider()
                 st.markdown("### Detected experiments")
 
                 experiments = getattr(manual, "experiments", [])
@@ -243,7 +233,7 @@ def render_faculty(user: User) -> None:
                                     st.error(str(exc))
 
     # =========================================================
-    # STUDENT ATTEMPTS & VIOLATIONS
+    # STUDENT ATTEMPTS & EVALUATION
     # =========================================================
     with results_tab:
         rows = attempt_rows(faculty_id=user.id)
@@ -253,7 +243,7 @@ def render_faculty(user: User) -> None:
         else:
             frame = pd.DataFrame(rows)
 
-            c1, c2, c3, c4 = st.columns(4)
+            c1, c2, c3 = st.columns(3)
 
             c1.metric("Recorded answers", len(frame))
 
@@ -266,10 +256,6 @@ def render_faculty(user: User) -> None:
                 c3.metric("Average mark", f"{frame['score'].mean():.2f}/10")
             else:
                 c3.metric("Average mark", "0.00/10")
-
-            if "session_status" in frame.columns:
-                terminated_count = frame[frame["session_status"] == "TERMINATED"]["university_id"].nunique()
-                c4.metric("Terminated vivas", terminated_count)
 
             st.markdown("### Experiment performance")
 
@@ -291,7 +277,7 @@ def render_faculty(user: User) -> None:
                     hide_index=True,
                 )
 
-            st.markdown("### Attempts, violations & evaluation feedback")
+            st.markdown("### Attempts & evaluation feedback")
 
             display_columns = [
                 "created_at",
@@ -301,9 +287,6 @@ def render_faculty(user: User) -> None:
                 "question",
                 "score",
                 "session_status",
-                "exit_count",
-                "allowed_exits",
-                "terminated_reason",
                 "feedback",
             ]
 

@@ -198,57 +198,36 @@ def get_session(session_id: int) -> VivaSession | None:
         return session
 
 
-def update_manual_settings(manual_id: int, allowed_exits: int, question_count: int = QUESTIONS_PER_VIVA) -> None:
+def update_manual_settings(manual_id: int, allowed_exits: int = 3, question_count: int = QUESTIONS_PER_VIVA) -> None:
     with session_scope() as db:
         manual = db.get(Manual, manual_id)
         if not manual:
             raise RuntimeError("Manual not found.")
-        manual.allowed_exits = max(0, int(allowed_exits))
         manual.question_count = max(1, min(10, int(question_count)))
         manual.updated_at = datetime.utcnow()
 
 
 def record_fullscreen_exit(session_id: int) -> dict:
-    """Record a fullscreen exit event for an active viva session."""
-    with session_scope() as db:
-        session = db.get(VivaSession, session_id)
-        if not session:
-            return {"status": "UNKNOWN", "exit_count": 0, "allowed_exits": 3}
-        if session.status != "IN_PROGRESS":
-            return {
-                "status": session.status,
-                "exit_count": session.exit_count,
-                "allowed_exits": session.allowed_exits,
-                "reason": session.terminated_reason,
-            }
-
-        session.exit_count = (session.exit_count or 0) + 1
-        violations = load_json_list(session.exit_violations)
-        violations.append(datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
-        session.exit_violations = json.dumps(violations)
-
-        if session.exit_count > session.allowed_exits:
-            session.status = "TERMINATED"
-            session.terminated_reason = f"Exceeded maximum allowed fullscreen exits ({session.allowed_exits})"
-            session.completed_at = datetime.utcnow()
-
-        db.flush()
-        return {
-            "status": session.status,
-            "exit_count": session.exit_count,
-            "allowed_exits": session.allowed_exits,
-            "reason": session.terminated_reason,
-        }
+    """No-op handler retained for backward compatibility."""
+    return {"status": "IN_PROGRESS", "exit_count": 0, "allowed_exits": 999}
 
 
-def terminate_viva_session(session_id: int, reason: str = "Fullscreen exit countdown expired") -> None:
-    """Terminate an active viva session due to rule violation or timeout."""
+def terminate_viva_session(session_id: int, reason: str = "Examination ended") -> None:
+    """Terminate an active viva session and finalize scores."""
     with session_scope() as db:
         session = db.get(VivaSession, session_id)
         if session and session.status == "IN_PROGRESS":
-            session.status = "TERMINATED"
+            session.status = "COMPLETED"
             session.terminated_reason = reason
             session.completed_at = datetime.utcnow()
+            answered = (
+                db.query(VivaAnswer)
+                .join(VivaQuestion)
+                .filter(VivaQuestion.session_id == session_id)
+                .all()
+            )
+            total = sum(item.score for item in answered)
+            session.total_score = min(float(session.max_score), round(total, 1))
 
 
 def start_viva_session(student_id: int, experiment_id: int) -> VivaSession:
@@ -260,10 +239,18 @@ def start_viva_session(student_id: int, experiment_id: int) -> VivaSession:
     if not experiment or not experiment.manual.is_published:
         raise RuntimeError("This experiment is not available for viva assessment.")
 
-    allowed = getattr(experiment.manual, "allowed_exits", 3) or 3
-    q_count = getattr(experiment.manual, "question_count", QUESTIONS_PER_VIVA) or QUESTIONS_PER_VIVA
+    q_count = QUESTIONS_PER_VIVA
 
-    questions = generate_viva_questions(experiment.content, q_count)
+    with session_scope() as db:
+        attempt_count = db.query(VivaSession).filter(VivaSession.student_id == student_id, VivaSession.experiment_id == experiment_id).count() + 1
+
+    questions = generate_viva_questions(
+        experiment.content,
+        q_count,
+        student_id=student_id,
+        attempt_number=attempt_count,
+        title=experiment.title,
+    )
     if len(questions) != q_count:
         raise RuntimeError(f"Question generation failed: expected {q_count} questions, got {len(questions)}.")
 
@@ -271,13 +258,19 @@ def start_viva_session(student_id: int, experiment_id: int) -> VivaSession:
         if existing:
             session = db.get(VivaSession, existing.id)
             if session:
-                db.query(VivaQuestion).filter(VivaQuestion.session_id == session.id).delete()
+                old_q_ids = [q.id for q in session.questions]
+                if old_q_ids:
+                    db.query(VivaAnswer).filter(VivaAnswer.question_id.in_(old_q_ids)).delete(synchronize_session=False)
+                    db.query(Result).filter(Result.question_id.in_(old_q_ids)).delete(synchronize_session=False)
+                db.query(VivaQuestion).filter(VivaQuestion.session_id == session.id).delete(synchronize_session=False)
+                session.max_score = float(q_count * MAX_MARKS_PER_QUESTION)
+                session.total_score = 0.0
         else:
             session = VivaSession(
                 student_id=student_id,
                 experiment_id=experiment_id,
                 status="IN_PROGRESS",
-                allowed_exits=allowed,
+                allowed_exits=999,
                 exit_count=0,
                 exit_violations="[]",
                 max_score=float(q_count * MAX_MARKS_PER_QUESTION),
@@ -435,10 +428,6 @@ def attempt_rows(faculty_id: int | None = None) -> list[dict]:
                     "missing": ", ".join(load_json_list(result.missing_concepts)),
                     "session_status": session.status,
                     "session_total": session.total_score,
-                    "allowed_exits": session.allowed_exits,
-                    "exit_count": session.exit_count,
-                    "exit_violations": load_json_list(session.exit_violations),
-                    "terminated_reason": session.terminated_reason,
                 }
             )
         return payload

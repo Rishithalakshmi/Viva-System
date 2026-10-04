@@ -94,7 +94,7 @@ def create_user(
 
 
 def register_student(email: str, password: str, full_name: str) -> tuple[User | None, str]:
-    return create_user(email, password, full_name, "STUDENT", is_active=False)
+    return create_user(email, password, full_name, "STUDENT", is_active=True)
 
 
 def bootstrap_admin(email: str, password: str, full_name: str) -> tuple[User | None, str]:

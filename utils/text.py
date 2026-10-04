@@ -5,6 +5,9 @@ import re
 def clean(text: str | None) -> str:
     if not text:
         return ""
+    # Strip non-ascii private glyphs (like \uf0b7, \uf020) and unicode bullets
+    text = re.sub(r"[\uf000-\uf8ff]", " ", text)
+    text = re.sub(r"[•·■▪►✔✕✖★\u2022\u2023\u25E6\u2043\u2219]", " ", text)
     # Separate camel-cased concatenated words from PDF extractions (e.g. SimpleLinearRegression -> Simple Linear Regression)
     text = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
     # Insert space after colon or punctuation merged with text (e.g. Statement:Taking -> Statement: Taking)
@@ -48,14 +51,16 @@ def format_experiment_title(raw_title: str | None, number: int) -> str:
 
 
 def parse_json_object(text: str | None):
-    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", (text or "").strip(), flags=re.I)
+    if not text:
+        return None
+    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip(), flags=re.I)
     try:
         data = json.loads(text)
         if isinstance(data, dict):
             return data
     except Exception:
         pass
-    match = re.search(r"\{.*\}", text or "", re.S)
+    match = re.search(r"\{.*\}", text, re.S)
     if match:
         try:
             data = json.loads(match.group(0))
@@ -67,7 +72,8 @@ def parse_json_object(text: str | None):
 
 
 def concept_terms(text: str, limit: int = 15) -> list[str]:
-    words = re.findall(r"[A-Za-z][A-Za-z0-9_+#.-]{2,}", (text or "").lower())
+    cleaned = clean(text)
+    raw_words = re.findall(r"\b[A-Za-z][A-Za-z0-9_-]{2,}\b", cleaned.lower())
     stop = {
         "the", "and", "for", "with", "from", "this", "that", "using", "into", "have",
         "has", "are", "was", "were", "will", "then", "than", "their", "there", "which",
@@ -75,11 +81,16 @@ def concept_terms(text: str, limit: int = 15) -> list[str]:
         "one", "two", "three", "step", "program", "problem", "statement", "description",
         "output", "import", "data", "aim", "theory", "procedure", "result", "conclusion",
         "experiment", "laboratory", "manual", "student", "faculty", "write", "given",
+        "example", "examples", "taking", "table", "following", "none", "each", "used",
+        "need", "show", "find", "make", "same", "well", "like", "call", "apply", "code",
+        "python", "pandas", "numpy", "matplotlib", "sklearn", "fit", "plot", "print",
+        "def", "return", "self", "class", "true", "false", "file", "line", "read",
     }
     freq: dict[str, int] = {}
-    for word in words:
-        if word not in stop and len(word) > 3:
-            freq[word] = freq.get(word, 0) + 1
+    for word in raw_words:
+        w = word.strip("._-")
+        if w not in stop and len(w) > 3 and not w.isdigit() and len(w) < 22:
+            freq[w] = freq.get(w, 0) + 1
     return [word for word, _ in sorted(freq.items(), key=lambda item: (-item[1], item[0]))[:limit]]
 
 

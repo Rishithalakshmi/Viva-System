@@ -53,7 +53,7 @@ class Manual(Base):
     faculty_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     allowed_exits: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
-    question_count: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    question_count: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -90,7 +90,7 @@ class VivaSession(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     total_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    max_score: Mapped[float] = mapped_column(Float, default=50.0, nullable=False)
+    max_score: Mapped[float] = mapped_column(Float, default=30.0, nullable=False)
     allowed_exits: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     exit_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     exit_violations: Mapped[str] = mapped_column(Text, default="[]", nullable=False)

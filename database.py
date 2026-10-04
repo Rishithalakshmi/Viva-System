@@ -39,7 +39,7 @@ def init_db() -> None:
     with engine.connect() as conn:
         for table, col, col_type, default in [
             ("manuals", "allowed_exits", "INTEGER", "3"),
-            ("manuals", "question_count", "INTEGER", "5"),
+            ("manuals", "question_count", "INTEGER", "3"),
             ("viva_sessions", "allowed_exits", "INTEGER", "3"),
             ("viva_sessions", "exit_count", "INTEGER", "0"),
             ("viva_sessions", "exit_violations", "TEXT", "'[]'"),
@@ -52,6 +52,12 @@ def init_db() -> None:
                 conn.commit()
             except Exception:
                 pass
+        try:
+            conn.execute(text("UPDATE manuals SET question_count = 3 WHERE question_count != 3"))
+            conn.execute(text("UPDATE users SET is_active = 1 WHERE role = 'STUDENT'"))
+            conn.commit()
+        except Exception:
+            pass
 
 
 @contextmanager

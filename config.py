@@ -24,9 +24,10 @@ NEMO_MODEL = "nvidia/nemotron-3.5-asr-streaming-0.6b"
 
 # Accept student email pattern for university IDs ending with @klu.ac.in or @kalasalingam.ac.in
 EMAIL_PATTERN = re.compile(r"^\d+@(klu\.ac\.in|kalasalingam\.ac\.in)$")
-QUESTIONS_PER_VIVA = 5
+QUESTIONS_PER_VIVA = 3
 MAX_MARKS_PER_QUESTION = 10
 MAX_MARKS_TOTAL = QUESTIONS_PER_VIVA * MAX_MARKS_PER_QUESTION
+QUESTION_TIMER_SECONDS = 120
 DEFAULT_ALLOWED_FULLSCREEN_EXITS = 3
 
 ROLES = ("ADMIN", "FACULTY", "HOD", "STUDENT")

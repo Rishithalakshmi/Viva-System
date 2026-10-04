@@ -9,20 +9,24 @@ import pyttsx3
 import streamlit as st
 import streamlit.components.v1 as components
 
-from config import MAX_MARKS_PER_QUESTION, MAX_MARKS_TOTAL, QUESTIONS_PER_VIVA, UNIVERSITY
+from config import (
+    MAX_MARKS_PER_QUESTION,
+    MAX_MARKS_TOTAL,
+    QUESTION_TIMER_SECONDS,
+    QUESTIONS_PER_VIVA,
+    UNIVERSITY,
+)
 from models import User
 from services.asr import DEFAULT_AUDIO_DEVICE, record_audio_dshow, transcribe_audio
-from services.llm import clean_question_text
+from services.llm import validate_and_clean_question
 from services.viva import (
     audio_file_path,
     get_open_session,
     get_session,
     published_experiments,
-    record_fullscreen_exit,
     start_viva_session,
     student_sessions,
     submit_answer,
-    terminate_viva_session,
 )
 from utils.text import format_experiment_title, load_json_list
 from views.theme import banner
@@ -66,35 +70,38 @@ def _current_open_question(session):
     return None
 
 
-def _inject_viva_security_and_fullscreen_js(session_id: int, allowed_exits: int, current_exits: int, is_completed: bool = False):
+def _inject_viva_timer_and_security_js(
+    session_id: int,
+    is_completed: bool = False,
+    timer_seconds: int = 120,
+    question_id: int | None = None,
+):
     """
     Inject browser-side JavaScript for:
     1. Anti-cheating: Disable copy/paste/cut/contextmenu on answer textarea
-    2. Fullscreen enforcement and 10-second exit countdown system
-    3. Automatic fullscreen exit on examination completion
+    2. Live 2-minute question countdown timer with automatic submission on expiration
+    (Navigation monitoring is completely removed)
     """
     is_comp_js = "true" if is_completed else "false"
+    qid_js = f"{question_id}" if question_id is not None else "null"
     js_code = f"""
     <script>
     (function() {{
         const parentDoc = window.parent.document;
+        const parentWin = window.parent;
         const sessionId = {session_id};
-        const allowedExits = {allowed_exits};
         const isCompleted = {is_comp_js};
+        const activeQuestionId = {qid_js};
+        let questionTimeLeft = {timer_seconds};
         
-        // Automatic Exit Fullscreen when exam legitimately completes
         if (isCompleted) {{
-            if (parentDoc.fullscreenElement) {{
-                try {{ parentDoc.exitFullscreen().catch(() => {{}}); }} catch(e) {{}}
+            if (window._vivaQuestionTimerInterval) {{
+                clearInterval(window._vivaQuestionTimerInterval);
             }}
-            const modal = parentDoc.getElementById('viva-exit-warning-modal');
-            if (modal) modal.style.display = 'none';
-            parentDoc.onfullscreenchange = null;
-            parentDoc.onvisibilitychange = null;
             return;
         }}
 
-        // 1. Anti-cheating Copy-Paste Prevention
+        // 1. Anti-cheating Copy-Paste Prevention on Answer Textarea
         function disableCopyPaste() {{
             const textareas = parentDoc.querySelectorAll('textarea');
             textareas.forEach(el => {{
@@ -102,7 +109,7 @@ def _inject_viva_security_and_fullscreen_js(session_id: int, allowed_exits: int,
                     el.dataset.vivaProtected = "true";
                     el.addEventListener('paste', function(e) {{
                         e.preventDefault();
-                        alert("Clipboard paste is disabled during the live viva examination. Please type or speak your response directly.");
+                        alert("Clipboard paste is disabled during the viva exam. Please type or speak your response directly.");
                     }});
                     el.addEventListener('copy', function(e) {{ e.preventDefault(); }});
                     el.addEventListener('cut', function(e) {{ e.preventDefault(); }});
@@ -121,80 +128,47 @@ def _inject_viva_security_and_fullscreen_js(session_id: int, allowed_exits: int,
             }}
         }}, true);
 
-        setInterval(disableCopyPaste, 800);
+        setInterval(disableCopyPaste, 600);
 
-        // 2. Fullscreen Exit Detection & 10-Second Countdown Warning
-        let warningModal = parentDoc.getElementById('viva-exit-warning-modal');
-        if (!warningModal) {{
-            warningModal = parentDoc.createElement('div');
-            warningModal.id = 'viva-exit-warning-modal';
-            warningModal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(11,31,58,0.92); z-index:999999; color:#fff; text-align:center; padding-top:15vh; font-family:sans-serif;';
-            warningModal.innerHTML = `
-                <div style="background:#fff; color:#0b1f3a; max-width:550px; margin:0 auto; padding:32px; border-radius:18px; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
-                    <h2 style="color:#7a1f2b; margin-top:0;">⚠️ FULLSCREEN VIOLATION DETECTED</h2>
-                    <p style="font-size:1.1rem;">You have exited distraction-free fullscreen mode.</p>
-                    <p style="font-weight:bold; font-size:1.2rem; color:#7a1f2b;">Return to fullscreen within <span id="viva-countdown-num" style="font-size:2rem; color:#0b1f3a;">10</span> seconds or your examination will be automatically terminated.</p>
-                    <button id="viva-return-fs-btn" style="background:#0b1f3a; color:#fff; font-size:1.1rem; font-weight:bold; padding:12px 28px; border:none; border-radius:10px; cursor:pointer; margin-top:15px;">Return to Fullscreen</button>
-                </div>
-            `;
-            parentDoc.body.appendChild(warningModal);
-        }}
+        // 2. Live 2-Minute Question Countdown Timer with Auto-Submission on Expiration
+        if (activeQuestionId !== null && !isCompleted) {{
+            if (window._vivaQuestionTimerInterval) {{
+                clearInterval(window._vivaQuestionTimerInterval);
+            }}
 
-        const countdownSpan = parentDoc.getElementById('viva-countdown-num');
-        const returnBtn = parentDoc.getElementById('viva-return-fs-btn');
-        let countdownTimer = null;
-        let secondsLeft = 10;
-        let isHandlingExit = false;
+            window._vivaQuestionTimerInterval = setInterval(() => {{
+                questionTimeLeft -= 1;
+                const timerElem = parentDoc.getElementById('viva-timer-live');
+                if (timerElem) {{
+                    const m = Math.floor(Math.max(0, questionTimeLeft) / 60);
+                    const s = Math.max(0, questionTimeLeft) % 60;
+                    const mStr = String(m).padStart(2, '0');
+                    const sStr = String(s).padStart(2, '0');
+                    timerElem.innerText = mStr + ':' + sStr;
+                }}
 
-        function triggerExitViolation() {{
-            if (isHandlingExit || isCompleted) return;
-            isHandlingExit = true;
-            secondsLeft = 10;
-            if (countdownSpan) countdownSpan.innerText = secondsLeft;
-            if (warningModal) warningModal.style.display = 'block';
-
-            if (countdownTimer) clearInterval(countdownTimer);
-            countdownTimer = setInterval(() => {{
-                secondsLeft -= 1;
-                if (countdownSpan) countdownSpan.innerText = secondsLeft;
-                if (secondsLeft <= 0) {{
-                    clearInterval(countdownTimer);
-                    // Notify Streamlit server of termination request
-                    const params = new URLSearchParams(window.parent.location.search);
-                    params.set('viva_exit_session', sessionId);
-                    params.set('viva_action', 'terminate');
-                    window.parent.location.search = params.toString();
+                if (questionTimeLeft <= 0) {{
+                    clearInterval(window._vivaQuestionTimerInterval);
+                    const ta = parentDoc.querySelector('textarea');
+                    const currentText = ta ? ta.value : '';
+                    
+                    let submitted = false;
+                    const buttons = Array.from(parentDoc.querySelectorAll('button'));
+                    const submitBtn = buttons.find(b => b.innerText && (b.innerText.includes('Submit Answer') || b.innerText.includes('Submit')));
+                    if (submitBtn) {{
+                        submitBtn.click();
+                        submitted = true;
+                    }}
+                    
+                    if (!submitted) {{
+                        const params = new URLSearchParams(parentWin.location.search);
+                        params.set('viva_auto_timeout_q', String(activeQuestionId));
+                        params.set('viva_timeout_ans', encodeURIComponent(currentText));
+                        parentWin.location.search = params.toString();
+                    }}
                 }}
             }}, 1000);
         }}
-
-        if (returnBtn) {{
-            returnBtn.onclick = function() {{
-                if (countdownTimer) clearInterval(countdownTimer);
-                if (warningModal) warningModal.style.display = 'none';
-                isHandlingExit = false;
-                try {{
-                    parentDoc.documentElement.requestFullscreen().catch(() => {{}});
-                }} catch(e) {{}}
-                // Log violation count on backend
-                const params = new URLSearchParams(window.parent.location.search);
-                params.set('viva_exit_session', sessionId);
-                params.set('viva_action', 'record_exit');
-                window.parent.location.search = params.toString();
-            }};
-        }}
-
-        parentDoc.onfullscreenchange = function() {{
-            if (!parentDoc.fullscreenElement && !isCompleted) {{
-                triggerExitViolation();
-            }}
-        }};
-        
-        parentDoc.onvisibilitychange = function() {{
-            if (parentDoc.hidden && !isCompleted) {{
-                triggerExitViolation();
-            }}
-        }};
     }})();
     </script>
     """
@@ -202,24 +176,28 @@ def _inject_viva_security_and_fullscreen_js(session_id: int, allowed_exits: int,
 
 
 def render_student(user: User) -> None:
-    # Process incoming JS fullscreen violation events via query params if present
     query_params = st.query_params
-    if "viva_exit_session" in query_params:
-        session_id_val = int(query_params["viva_exit_session"])
-        action = query_params.get("viva_action", "record_exit")
-        st.query_params.clear()
-
-        if action == "terminate":
-            terminate_viva_session(session_id_val, "Exceeded 10-second fullscreen return countdown limit.")
-            st.warning("Viva session terminated due to fullscreen exit countdown timeout.")
-        else:
-            res = record_fullscreen_exit(session_id_val)
-            if res.get("status") == "TERMINATED":
-                st.error(f"Viva session terminated: {res.get('reason')}")
-        st.rerun()
-
     active_session_id = st.session_state.get("viva_session_id")
     active_session = get_session(active_session_id) if active_session_id else None
+
+    # Handle automatic timeout submission via query params if timer expired
+    if "viva_auto_timeout_q" in query_params:
+        timeout_qid = int(query_params["viva_auto_timeout_q"])
+        timeout_ans = query_params.get("viva_timeout_ans", "")
+        st.query_params.clear()
+        if active_session:
+            target_q = next((q for q in active_session.questions if q.id == timeout_qid and q.answer is None), None)
+            if target_q:
+                ans_text = str(timeout_ans).strip() or str(st.session_state.get(f"transcript_box_{timeout_qid}", "")).strip() or str(st.session_state.get("transcript", "")).strip()
+                try:
+                    submit_answer(target_q.id, ans_text, st.session_state.get("audio_path"))
+                except Exception:
+                    pass
+                _reset_answer_state()
+                st.session_state.pop(f"transcript_box_{timeout_qid}", None)
+                st.session_state.pop(f"q_start_time_{timeout_qid}", None)
+                st.session_state.showing_eval_for_q = target_q.id
+                st.rerun()
 
     # Check if student is in an active viva session
     is_in_viva = (
@@ -230,9 +208,6 @@ def render_student(user: User) -> None:
 
     st.session_state.viva_active = is_in_viva
 
-    # =========================================================================
-    # DISTRACTION-FREE VIVA MODE (Requirements 1, 2, 3, 5, 6, 7, 8)
-    # =========================================================================
     if is_in_viva and active_session:
         _render_distraction_free_viva(user, active_session)
         return
@@ -301,13 +276,12 @@ def render_student(user: User) -> None:
             with col_a:
                 start = st.button("🚀 Start / Resume Viva", type="primary", use_container_width=True)
             with col_b:
-                st.caption("AI Voice speaks each question. Dedicated distraction-free fullscreen viva mode will launch.")
+                st.caption("AI Voice speaks each question. Dedicated oral viva assessment will begin.")
 
-            start_failed = False
             if start:
                 progress = st.progress(15)
                 note = st.empty()
-                note.info("Initializing viva session & generating questions with AI voice...")
+                note.info("Initializing viva session & generating experiment-specific questions...")
                 try:
                     progress.progress(50)
                     session = start_viva_session(user.id, experiment_id)
@@ -315,21 +289,13 @@ def render_student(user: User) -> None:
                     st.session_state.viva_session_id = session.id
                     st.session_state.viva_mode_started = True
                     _reset_answer_state()
-                    note.success("Viva session ready! Entering fullscreen mode...")
-                    time.sleep(0.5)
+                    note.success("Viva session ready! Launching...")
+                    time.sleep(0.3)
                     st.rerun()
                 except Exception as exc:
                     progress.progress(100)
                     note.error(f"Viva initialization failed: {exc}")
                     st.error(str(exc))
-                    start_failed = True
-
-            session_id = st.session_state.get("viva_session_id")
-            if not start_failed and session_id:
-                session = get_session(session_id)
-                if session and session.status == "TERMINATED":
-                    st.error(f"❌ This viva session was terminated: {session.terminated_reason or 'Fullscreen violation'}")
-                    st.write(f"**Fullscreen exits recorded:** {session.exit_count} / {session.allowed_exits}")
 
     with history:
         sessions = student_sessions(user.id)
@@ -345,16 +311,13 @@ def render_student(user: User) -> None:
                         "Experiment": f"Experiment {item.experiment.number} — {format_experiment_title(item.experiment.title, item.experiment.number)}",
                         "Status": item.status.replace("_", " ").title(),
                         "Total Score": f"{item.total_score:.1f}/{item.max_score:.0f}",
-                        "Exits / Allowed": f"{item.exit_count} / {item.allowed_exits}",
                     }
                 )
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
             for item in sessions:
                 with st.expander(f"Experiment {item.experiment.number} — {format_experiment_title(item.experiment.title, item.experiment.number)} · {item.status}"):
-                    if item.status == "TERMINATED":
-                        st.error(f"Session Terminated: {item.terminated_reason}")
                     for question in item.questions:
-                        clean_q = clean_question_text(question.question_text)
+                        clean_q = validate_and_clean_question(question.question_text)
                         st.markdown(f"**Q{question.order_index}.** {clean_q}")
                         if question.answer:
                             st.write(f"**Transcript:** {question.answer.transcript}")
@@ -366,7 +329,7 @@ def render_student(user: User) -> None:
 
 
 def _render_distraction_free_viva(user: User, session) -> None:
-    """Renders distraction-free viva mode with immediate per-question evaluation & final summary."""
+    """Renders distraction-free viva mode with 2-minute question timer, immediate evaluation & final summary."""
     showing_eval_q_id = st.session_state.get("showing_eval_for_q")
     eval_q = None
     if showing_eval_q_id:
@@ -374,40 +337,87 @@ def _render_distraction_free_viva(user: User, session) -> None:
 
     current = _current_open_question(session)
 
-    # 1. PER-QUESTION EVALUATION VIEW (Req 1)
+    # 1. PER-QUESTION EVALUATION VIEW
     if eval_q and eval_q.answer:
         _render_question_evaluation_view(session, eval_q)
         return
 
-    # 2. FINAL VIVA RESULT VIEW (Req 2 & 3)
+    # 2. FINAL VIVA RESULT VIEW
     if current is None:
         _render_final_viva_result_view(user, session)
         return
 
-    # 3. ACTIVE QUESTION INPUT VIEW
-    _inject_viva_security_and_fullscreen_js(session.id, session.allowed_exits, session.exit_count, is_completed=False)
+    # 3. ACTIVE QUESTION INPUT VIEW WITH 2-MINUTE TIMER
+    box_key = f"transcript_box_{current.id}"
+    q_start_key = f"q_start_time_{current.id}"
+    if q_start_key not in st.session_state:
+        st.session_state[q_start_key] = time.time()
 
-    # Top Distraction-free Header
-    h_col1, h_col2, h_col3 = st.columns([3, 2, 1])
+    elapsed_sec = int(time.time() - st.session_state[q_start_key])
+    seconds_left = max(0, QUESTION_TIMER_SECONDS - elapsed_sec)
+
+    # Auto-submit if 2 minutes expire on backend
+    if seconds_left <= 0:
+        final_text = str(st.session_state.get(box_key, "")).strip() or str(st.session_state.get("transcript", "")).strip()
+        try:
+            submit_answer(
+                current.id,
+                final_text,
+                st.session_state.get("audio_path"),
+            )
+        except Exception:
+            pass
+        _reset_answer_state()
+        st.session_state.pop(box_key, None)
+        st.session_state.pop(q_start_key, None)
+        st.session_state.showing_eval_for_q = current.id
+        st.rerun()
+
+    _inject_viva_timer_and_security_js(
+        session.id,
+        is_completed=False,
+        timer_seconds=seconds_left,
+        question_id=current.id,
+    )
+
+    # Top Header
+    h_col1, h_col2 = st.columns([3, 2])
     with h_col1:
         st.markdown(f"### 🧪 Ex {session.experiment.number}: {format_experiment_title(session.experiment.title, session.experiment.number)}")
-        st.caption(f"{UNIVERSITY} · Viva Examination Mode")
+        st.caption(f"{UNIVERSITY} · Viva Examination (3 Questions · 2 Mins/Question)")
     with h_col2:
         answered = sum(1 for q in session.questions if q.answer)
         total_q = len(session.questions)
         st.progress(answered / max(1, total_q))
         st.caption(f"Question {current.order_index} of {total_q} · Max Marks: {MAX_MARKS_PER_QUESTION}")
-    with h_col3:
-        exits_left = max(0, session.allowed_exits - session.exit_count)
-        st.metric("Allowed Exits Left", f"{exits_left}/{session.allowed_exits}")
+
+    # Live 2-Minute Timer Display Banner - Strict 2-color black and light lavender
+    mins = seconds_left // 60
+    secs = seconds_left % 60
+    st.markdown(
+        f"""
+        <div style="background:#000000; border:1.5px solid #D8B4FE; padding:10px 18px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; margin:8px 0 16px 0;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="color:#D8B4FE; font-weight:600; font-size:1rem;">⏱️ Question Timer (2:00 limit)</span>
+                <span style="color:#ffffff; opacity:0.8; font-size:0.85rem;">— Will auto-submit when time expires</span>
+            </div>
+            <div>
+                <span id="viva-timer-live" style="color:#D8B4FE; font-weight:bold; font-size:1.4rem; font-family:monospace; background:#000000; border:1px solid #D8B4FE; padding:4px 12px; border-radius:6px;">
+                    {mins:02d}:{secs:02d}
+                </span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.divider()
 
     # Question Display & AI TTS Voice Controls
-    clean_q = clean_question_text(current.question_text)
+    clean_q = validate_and_clean_question(current.question_text)
     
     st.markdown(f"#### ❓ Question {current.order_index}")
-    st.markdown(f"<div style='background:#0b1f3a; color:#ffffff; padding:20px 24px; border-radius:14px; font-size:1.25rem; font-weight:600; line-height:1.5;'>{clean_q}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:#000000; color:#ffffff; border:1.5px solid #D8B4FE; padding:20px 24px; border-radius:12px; font-size:1.25rem; font-weight:600; line-height:1.5;'>{clean_q}</div>", unsafe_allow_html=True)
     
     speech_key = f"speech_{current.id}"
     if speech_key not in st.session_state:
@@ -428,7 +438,7 @@ def _render_distraction_free_viva(user: User, session) -> None:
 
     # Microphone Recording Controls & Transcript Editing
     st.markdown("#### 🎤 Answer Input (Voice or Typed)")
-    st.info("🔒 **Anti-Cheating Active**: Copying and pasting into the answer box is disabled. Type your answer or use voice recording.")
+    st.info("🔒 Anti-cheating active: Type your answer directly or record voice using your microphone.")
 
     r_col1, r_col2, r_col3 = st.columns([1, 2, 1])
     with r_col1:
@@ -456,7 +466,6 @@ def _render_distraction_free_viva(user: User, session) -> None:
 
             st.session_state.audio_path = str(wav_path)
             st.session_state.transcript = transcript_text
-            box_key = f"transcript_box_{current.id}"
             st.session_state[box_key] = transcript_text
             status_box.success("Voice transcribed! Review and correct any ASR mistakes below before submitting.")
             st.rerun()
@@ -464,7 +473,6 @@ def _render_distraction_free_viva(user: User, session) -> None:
             progress_box.progress(100)
             status_box.error(f"Recording/transcription failed: {exc}")
 
-    box_key = f"transcript_box_{current.id}"
     if box_key not in st.session_state:
         st.session_state[box_key] = st.session_state.get("transcript", "")
 
@@ -494,6 +502,7 @@ def _render_distraction_free_viva(user: User, session) -> None:
                 eval_status.success("Answer evaluated successfully.")
                 _reset_answer_state()
                 st.session_state.pop(box_key, None)
+                st.session_state.pop(q_start_key, None)
                 st.session_state.showing_eval_for_q = current.id
                 st.rerun()
             except Exception as exc:
@@ -502,14 +511,14 @@ def _render_distraction_free_viva(user: User, session) -> None:
 
 
 def _render_question_evaluation_view(session, eval_q) -> None:
-    """Renders immediate per-question evaluation breakdown immediately after answer submission (Req 1)."""
+    """Renders immediate per-question evaluation breakdown immediately after answer submission."""
     ans = eval_q.answer
-    clean_q = clean_question_text(eval_q.question_text)
+    clean_q = validate_and_clean_question(eval_q.question_text)
     expected_list = load_json_list(eval_q.expected_concepts)
     matched_list = load_json_list(ans.matched_concepts)
     missing_list = load_json_list(ans.missing_concepts)
 
-    _inject_viva_security_and_fullscreen_js(session.id, session.allowed_exits, session.exit_count, is_completed=False)
+    _inject_viva_timer_and_security_js(session.id, is_completed=False)
 
     st.markdown(f"### 📊 Question {eval_q.order_index} — Score: {ans.score:.1f}/{MAX_MARKS_PER_QUESTION}")
     
@@ -518,14 +527,14 @@ def _render_question_evaluation_view(session, eval_q) -> None:
     with sc_col1:
         st.metric("Marks Awarded", f"{ans.score:.1f} / {MAX_MARKS_PER_QUESTION}")
     with sc_col2:
-        if ans.score >= 8.0:
-            st.success("🌟 Excellent! Strong understanding of core experiment concepts.")
-        elif ans.score >= 5.0:
+        if ans.score >= 7.0:
+            st.success("🌟 Excellent understanding of core experiment concepts.")
+        elif ans.score >= 4.0:
             st.info("👍 Good effort. Core concepts covered with partial marks awarded.")
         else:
-            st.warning("⚠️ Partial marks awarded. Fundamental concepts missing.")
+            st.warning("⚠️ Partial or zero marks awarded. Fundamental concepts missing.")
 
-    st.markdown(f"<div style='background:#f4efe4; border-left:4px solid #0b1f3a; padding:14px 18px; margin:12px 0; border-radius:8px;'><strong>Question:</strong> {clean_q}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:#000000; border:1.5px solid #D8B4FE; padding:14px 18px; margin:12px 0; border-radius:8px; color:#ffffff;'><strong style='color:#D8B4FE;'>Question:</strong> {clean_q}</div>", unsafe_allow_html=True)
     st.markdown(f"**Your Submitted Answer:** {ans.transcript}")
     
     st.divider()
@@ -533,7 +542,7 @@ def _render_question_evaluation_view(session, eval_q) -> None:
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("#### 💡 Why This Answer Received These Marks")
-        st.info(ans.feedback or "Evaluated using semantic concept matching.")
+        st.info(ans.feedback or "Evaluated using conceptual semantic matching.")
 
         st.markdown("#### ✓ Concepts Covered in Your Answer")
         if matched_list:
@@ -542,7 +551,7 @@ def _render_question_evaluation_view(session, eval_q) -> None:
         else:
             st.caption("No key concepts matched.")
 
-        st.markdown("#### ✗ Missing or Incorrect Concepts")
+        st.markdown("#### ✗ Missing Concepts")
         if missing_list:
             for item in missing_list:
                 st.markdown(f"- ❌ **{item}**")
@@ -550,16 +559,16 @@ def _render_question_evaluation_view(session, eval_q) -> None:
             st.caption("No major missing concepts recorded.")
 
     with c2:
-        st.markdown("#### 🎯 Expected Answer & Core Concepts")
-        st.write("A complete and strong answer for this question should explain:")
+        st.markdown("#### 🎯 Expected Core Concepts")
+        st.write("A complete answer for this question covers:")
         if expected_list:
             for item in expected_list:
                 st.markdown(f"- 📌 **{item}**")
         else:
-            st.markdown("- 📌 Practical implementation steps, dataset parameters, and model evaluation metrics.")
+            st.markdown("- 📌 Practical implementation steps, dataset parameters, and model metrics.")
 
         st.markdown("#### 📝 Improvement Guidance")
-        st.success("Connect your explanation directly to the theoretical principles and workflow in the laboratory manual.")
+        st.success("Connect your explanation directly to the theoretical principles in the laboratory manual.")
 
     st.divider()
 
@@ -577,26 +586,25 @@ def _render_question_evaluation_view(session, eval_q) -> None:
 
 
 def _render_final_viva_result_view(user: User, session) -> None:
-    """Renders comprehensive final viva result view & automatically exits fullscreen (Req 2 & 3)."""
-    # Inject JS to automatically exit browser fullscreen cleanly & disable violation warning
-    _inject_viva_security_and_fullscreen_js(session.id, session.allowed_exits, session.exit_count, is_completed=True)
+    """Renders comprehensive final viva result view."""
+    _inject_viva_timer_and_security_js(session.id, is_completed=True)
     
     st.session_state.viva_active = False
 
     banner(
-        f"Oral Viva Evaluation Complete · {session.experiment.title}",
+        f"Oral Viva Evaluation · {session.experiment.title}",
         "Final total score, question-wise breakdown, overall strengths, weak concepts, and improvement feedback.",
-        f"{UNIVERSITY} · Final Viva Result",
+        f"{UNIVERSITY} · Viva Result Summary",
     )
 
     r_col1, r_col2, r_col3 = st.columns(3)
     r_col1.metric("Final Viva Score", f"{session.total_score:.1f} / {session.max_score:.0f}")
-    r_col2.metric("Questions Answered", len(session.questions))
+    r_col2.metric("Questions Answered", f"{sum(1 for q in session.questions if q.answer)} / {len(session.questions)}")
     r_col3.metric("Status", session.status.replace("_", " ").title())
 
     st.divider()
 
-    # Aggregated Strengths & Weaknesses across all 5 questions
+    # Aggregated Strengths & Weaknesses across all questions
     all_matched = []
     all_missing = []
     for q in session.questions:
@@ -627,9 +635,9 @@ def _render_final_viva_result_view(user: User, session) -> None:
     st.divider()
     st.markdown("#### 📝 Overall Assessment Feedback")
     percentage = (session.total_score / session.max_score) * 100.0 if session.max_score > 0 else 0
-    if percentage >= 80:
-        st.success("🌟 Excellent performance! You demonstrated a comprehensive understanding of the experiment, algorithms, and evaluation metrics.")
-    elif percentage >= 60:
+    if percentage >= 75:
+        st.success("🌟 Excellent performance! You demonstrated a comprehensive understanding of the experiment principles and parameters.")
+    elif percentage >= 50:
         st.info("👍 Good effort. You understand the core experimental workflow. Review parameter interpretations to strengthen your understanding.")
     else:
         st.warning("⚠️ Partial marks awarded. Please review the laboratory manual theory, algorithm steps, and parameter choices.")
@@ -637,7 +645,7 @@ def _render_final_viva_result_view(user: User, session) -> None:
     st.divider()
     st.markdown("#### 📋 Question-by-Question Score Breakdown")
     for q in session.questions:
-        clean_q = clean_question_text(q.question_text)
+        clean_q = validate_and_clean_question(q.question_text)
         score_val = q.answer.score if q.answer else 0.0
         with st.expander(f"Question {q.order_index} — Score: {score_val:.1f}/{MAX_MARKS_PER_QUESTION}"):
             st.write(f"**Question:** {clean_q}")

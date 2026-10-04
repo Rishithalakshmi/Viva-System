@@ -61,13 +61,13 @@ def render_login() -> None:
                         st.rerun()
         else:
             st.subheader("Student registration")
-            st.caption("New student accounts remain inactive until an administrator activates them.")
+            st.caption("Register your student account with your university email and sign in immediately.")
             with st.form("register_form"):
                 full_name = st.text_input("Full name")
                 email = st.text_input("University email")
                 password = st.text_input("Password", type="password")
                 confirm = st.text_input("Confirm password", type="password")
-                submitted = st.form_submit_button("Submit registration", use_container_width=True)
+                submitted = st.form_submit_button("Register and Sign In", type="primary", use_container_width=True)
             if submitted:
                 if password != confirm:
                     st.error("Passwords do not match.")
@@ -76,4 +76,7 @@ def render_login() -> None:
                     if error:
                         st.error(error)
                     else:
-                        st.success("Registration received. An administrator must activate the account before sign-in.")
+                        st.session_state.user_id = _user.id
+                        st.session_state.role = _user.role
+                        st.success("Registration successful! Logging in...")
+                        st.rerun()
